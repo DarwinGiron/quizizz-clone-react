@@ -1,23 +1,26 @@
 // src/components/StartLiveSessionButton.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { ref, set } from 'firebase/database'; // Import ref and set from Realtime Database
+import { rtdb } from '../firebase/config'; // Import rtdb
 
 const StartLiveSessionButton = ({ quizId }) => {
   const navigate = useNavigate();
 
   const startSession = async () => {
-    const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const joinCode = Math.floor(100000 + Math.random() * 900000); // Generate numerical join code
+    const sessionId = `${quizId}-${Date.now()}`; // Generate a unique session ID
 
-    const docRef = await addDoc(collection(db, 'sessions'), {
-      quizId,
-      joinCode,
-      createdAt: Timestamp.now(),
-      active: true
-    });
+    // Save session data to Realtime Database
+    const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
+    await set(sessionRef, {
+      quizId: quizId,
+      joinCode: joinCode, // Save joinCode as a number
+      status: 'waiting', // Initial status
+      createdAt: Date.now(), // Use timestamp
+    }); // Note: We are primarily using RTDB for live session data
 
-    navigate(`/live/${quizId}/${docRef.id}`);
+    navigate(`/live/${quizId}/${sessionId}`); // Navigate using quizId and the generated sessionId
   };
 
   return (

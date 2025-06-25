@@ -27,6 +27,7 @@ import UsuariosAdmin from './pages/UsuariosAdmin';
 import GestionarCuadrilla from './pages/GestionarCuadrilla';
 import HorariosPorCapacitacion from './pages/HorariosPorCapacitacion';
 import AsignacionAvanzada from './pages/AsignacionAvanzada';
+import JoinSession from './pages/JoinSession';
 
 function PrivateRoute({ children }) {
   const [user, loading] = useAuthState(auth);
@@ -44,6 +45,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+
         {/* Rutas protegidas con layout */}
         <Route path="/dashboard" element={<PrivateRoute><MainLayout><Dashboard /></MainLayout></PrivateRoute>} />
         <Route path="/create" element={<PrivateRoute><MainLayout><CreateQuiz /></MainLayout></PrivateRoute>} />
@@ -51,7 +53,7 @@ function App() {
         <Route path="/quiz/:id" element={<PrivateRoute><MainLayout><QuizDetail /></MainLayout></PrivateRoute>} />
         <Route path="/edit/:id" element={<PrivateRoute><MainLayout><EditQuiz /></MainLayout></PrivateRoute>} />
         <Route path="/preview/:id" element={<PrivateRoute><MainLayout><PreviewQuiz /></MainLayout></PrivateRoute>} />
-        <Route path="/live/:id" element={<PrivateRoute><MainLayout><LiveSession /></MainLayout></PrivateRoute>} />
+        <Route path="/live/:quizId/:sessionId" element={<PrivateRoute><MainLayout><LiveSession /></MainLayout></PrivateRoute>} />
         <Route path="/sessions/:sessionId" element={<PrivateRoute><MainLayout><SessionsPage /></MainLayout></PrivateRoute>} />
         <Route path="/sessions/:sessionId/report" element={<PrivateRoute><MainLayout><SessionReport /></MainLayout></PrivateRoute>} />
         <Route path="/sessions/:sessionId/stats" element={<PrivateRoute><MainLayout><SessionStats /></MainLayout></PrivateRoute>} />
@@ -67,6 +69,7 @@ function App() {
         <Route path="/evaluacion/nueva" element={<PrivateRoute><MainLayout><SeleccionTipoEvaluacion /></MainLayout></PrivateRoute>}/>
         <Route path="/asignaciones" element={<Asignaciones />} />
         <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
+        <Route path="/join/:sessionId" element={<JoinSession />} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

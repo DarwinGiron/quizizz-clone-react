@@ -6,7 +6,9 @@ import { useParams } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { format } from 'date-fns';
+import Calendar from 'react-calendar';
 import Sidebar from '../components/Sidebar';
+import 'react-calendar/dist/Calendar.css';
 
 export default function AsignacionAvanzada() {
   const { capacitacionId } = useParams();
@@ -17,6 +19,7 @@ export default function AsignacionAvanzada() {
   const [bloques, setBloques] = useState([]);
   const [diasUnicos, setDiasUnicos] = useState([]);
   const [seleccionado, setSeleccionado] = useState(null);
+  const [fechasSaturadas, setFechasSaturadas] = useState([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [horarioSeleccionado, setHorarioSeleccionado] = useState(null);
   const [usuarioActual, setUsuarioActual] = useState(null);
@@ -63,6 +66,24 @@ export default function AsignacionAvanzada() {
 
     fetchData();
   }, [capacitacionId, usuarioActual, esAdmin]);
+
+  // Calculate fully booked dates
+  useEffect(() => {
+    if (diasUnicos.length === 0 || bloques.length === 0) {
+      setFechasSaturadas([]);
+      return;
+    }
+
+    const saturadas = diasUnicos.filter(dia => {
+      const bloquesDelDia = bloques.filter(bloque => bloque.fecha === dia);
+      if (bloquesDelDia.length === 0) return false; // No blocks for this day, not saturada
+
+      return bloquesDelDia.every(bloque =>
+        (bloque.participantes?.length || 0) >= bloque.cupo_disponible
+      );
+    });
+    setFechasSaturadas(saturadas);
+  }, [bloques, diasUnicos]);
 
   const cargarCuadrilla = async (supervisorId) => {
     const q = query(collection(db, 'cuadrilla'), where('supervisor_id', '==', supervisorId));
@@ -167,17 +188,15 @@ export default function AsignacionAvanzada() {
           {/* Días habilitados */}
           <div>
             <h2 className="text-sm font-semibold mb-1 text-gray-700">📅 Días habilitados</h2>
-            <div className="space-y-1 text-xs">
-              {diasUnicos.map(dia => (
-                <div
-                  key={dia}
-                  onClick={() => setDiaSeleccionado(dia)}
-                  className={`border p-1 rounded cursor-pointer hover:bg-blue-50 ${diaSeleccionado === dia ? 'bg-blue-100 border-blue-400' : ''}`}
-                >
-                  {format(new Date(dia), 'dd MMM yyyy')}
-                </div>
-              ))}
-            </div>
+            <Calendar
+              onChange={(date) => setDiaSeleccionado(format(date, 'yyyy-MM-dd'))}
+              value={diaSeleccionado ? new Date(diaSeleccionado) : null}
+              tileDisabled={({ date, view }) =>
+                view === 'month' &&
+                (!diasUnicos.includes(format(date, 'yyyy-MM-dd')) ||
+                 fechasSaturadas.includes(format(date, 'yyyy-MM-dd')))
+              }
+            />
           </div>
 
           {/* Horarios habilitados */}

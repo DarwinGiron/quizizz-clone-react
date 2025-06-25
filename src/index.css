@@ -2,3 +2,65 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Estilos para el contenedor principal del calendario */
+.react-calendar {
+  border-radius: 0.5rem; /* Tailwind rounded-md */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tailwind shadow-md */
+  font-family: inherit; /* Usar la fuente del proyecto */
+  width: 100%; /* Ajustar al ancho del contenedor */
+  max-width: 300px; /* O un ancho máximo que prefieras */
+  background-color: #fff; /* Fondo blanco */
+  border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+}
+
+/* Estilos para la navegación (botones de mes/año) */
+.react-calendar__navigation {
+  display: flex;
+  height: 40px; /* Tailwind h-10 */
+  margin-bottom: 1rem; /* Tailwind mb-4 */
+}
+
+.react-calendar__navigation button {
+  min-width: 40px;
+  background: none;
+  font-size: 0.875rem; /* Tailwind text-sm */
+  color: #4b5563; /* Tailwind text-gray-600 */
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background-color: #e5e7eb; /* Tailwind bg-gray-200 */
+}
+
+/* Estilos para la cabecera de los días de la semana */
+.react-calendar__month-view__weekdays {
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 600; /* Tailwind font-semibold */
+  font-size: 0.75rem; /* Tailwind text-xs */
+  color: #6b7280; /* Tailwind text-gray-500 */
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  padding: 0.5em;
+}
+
+/* Estilos para los días individuales (tiles) */
+.react-calendar__tile {
+  padding: 0.75em 0.5em; /* Ajustar padding */
+  font-size: 0.875rem; /* Tailwind text-sm */
+  color: #374151; /* Tailwind text-gray-700 */
+  border: none !important; /* Eliminar el borde por defecto de los días */
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background-color: #e5e7eb; /* Tailwind bg-gray-200 */
+  color: #1f2937; /* Tailwind text-gray-800 */
+}
+
+/* Estilos para los días de otros meses */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #9ca3af; /* Tailwind text-gray-400 */
+}
