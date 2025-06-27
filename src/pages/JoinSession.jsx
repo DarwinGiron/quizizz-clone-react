@@ -23,10 +23,12 @@ const JoinSession = () => {
   };
 
   useEffect(() => {
+    console.log('useEffect running', { roomCode, rtdb });
     const sessionRef = ref(rtdb, `liveSessions/${roomCode}`);
     const unsubscribe = onValue(sessionRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        console.log('JoinSession listener - status:', data.status); // Added console.log
         setSessionData(data); // Guardar todos los datos de la sesión
         setSessionStatus(data.status || 'waiting'); // Actualizar estado
       } else {
@@ -72,7 +74,7 @@ const JoinSession = () => {
         setError('Por favor, completa todos los campos requeridos.');
         return;
     }
-    if (sessionStatus !== 'waiting') {
+    if (sessionStatus === 'started' || sessionStatus === 'ended') {
       alert('La sesión ya ha comenzado o terminado.');
       return;
     }

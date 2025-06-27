@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -28,6 +28,7 @@ import GestionarCuadrilla from './pages/GestionarCuadrilla';
 import HorariosPorCapacitacion from './pages/HorariosPorCapacitacion';
 import AsignacionAvanzada from './pages/AsignacionAvanzada';
 import JoinSession from './pages/JoinSession';
+import JoinLandingPage from './pages/JoinLandingPage';
 
 function PrivateRoute({ children }) {
   const [user, loading] = useAuthState(auth);
@@ -69,7 +70,8 @@ function App() {
         <Route path="/evaluacion/nueva" element={<PrivateRoute><MainLayout><SeleccionTipoEvaluacion /></MainLayout></PrivateRoute>}/>
         <Route path="/asignaciones" element={<Asignaciones />} />
         <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
-        <Route path="/join/:sessionId" element={<JoinSession />} />
+        <Route path="/join" element={<JoinLandingPage />} />
+        <Route path="/join/:roomCode" element={<JoinSession />} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
