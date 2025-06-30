@@ -37,7 +37,7 @@ const Sidebar = () => {
           {/* Logo */}
           <img src="/logo.png" alt="Logo" className={`transition-all duration-200 mb-6 ${open ? 'w-16 h-16' : 'w-10 h-10'}`} style={{ borderRadius: 12 }} />
           {/* Título solo si está abierto */}
-          <h1 className={`text-xl font-bold text-white mb-8 transition-all duration-200 ${open ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>Convocatorias</h1>
+          <h1 className={`text-xl font-bold text-white mb-8 transition-all duration-200 ${open ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>Cuestionary</h1>
           <nav className={`flex flex-col gap-6 w-full items-center justify-center`}>
             <Link
               to="/dashboard"

@@ -77,12 +77,22 @@ const LiveSession = () => {
     }
   };
 
+  const handleCancelSession = async () => {
+    // Cambiar estado a cancelado en RTDB
+    const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
+    await set(sessionRef, {
+      status: 'cancelled',
+      quizId: quizId,
+    });
+    navigate(-1);
+  };
+
 
   return (
     <div className="h-screen w-full bg-gradient-to-br from-purple-800 to-black text-white font-sans relative overflow-hidden">
       {/* Botón Regresar en la esquina superior izquierda */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={handleCancelSession}
         className="absolute top-4 left-4 px-4 py-2 border border-white text-white rounded-md bg-white bg-opacity-10 hover:bg-opacity-20 transition z-10"
       >
         Regresar
@@ -138,6 +148,9 @@ const LiveSession = () => {
                  {participants.map((p, i) => (
                    <div key={i} className="bg-purple-700 px-3 py-1 rounded-full text-xs text-white">
                      {p.name || `Participante ${i + 1}`}
+                     {p.personnelCode && (
+                       <span className="ml-2 text-purple-200">({p.personnelCode})</span>
+                     )}
                    </div>
                  ))}
                </div>

@@ -1,212 +1,239 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ref, push, onValue, get } from 'firebase/database';
-import { rtdb } from '../firebase/config'; // Asegúrate de que rtdb se exporte como la instancia de Realtime Database
+import { useNavigate } from 'react-router-dom';
+import { ref, push, onValue, get, child } from 'firebase/database';
+import { db, rtdb } from '../firebase/config';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const JoinSession = () => {
-  const { roomCode } = useParams();
   const navigate = useNavigate();
+  const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const [participantName, setParticipantName] = useState('');
-  const [sessionStatus, setSessionStatus] = useState('waiting'); // 'waiting', 'started', 'finished', 'ended'
+  const [sessionStatus, setSessionStatus] = useState('waiting');
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [personnelCode, setPersonnelCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
-  const [joinCodeInput, setJoinCodeInput] = useState('');
   const [error, setError] = useState('');
   const [sessionData, setSessionData] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [step, setStep] = useState('joincode'); // 'joincode' | 'lobby'
 
-  // Función para manejar errores de forma centralizada
-  const handleError = (errorMessage, consoleError) => {
-    console.error(consoleError);
-    setError(errorMessage);
-    setIsJoining(false); // Asegurarse de resetear isJoining si es un error al unirse
-  };
-
+  // Ocultar sidebar/layout: body fondo oscuro y sin padding
   useEffect(() => {
-    const sessionRef = ref(rtdb, `liveSessions/${roomCode}`);
-    const unsubscribe = onValue(sessionRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        setSessionData(data); // Guardar todos los datos de la sesión
-        setSessionStatus(data.status || 'waiting'); // Actualizar estado
-      } else {
-        // Si el nodo de la sesión desaparece, asumimos que terminó
-        setSessionStatus('ended');
-        setSessionData(null); // Limpiar datos de la sesión
-      }
-    }, (error) => { // Añadir manejo de errores al listener
-      handleError("Hubo un error al cargar la sesión. Inténtalo de nuevo.", "Error fetching session data:");
-      setSessionStatus('ended'); // Asumir que la sesión terminó o no es accesible
-    });
-
+    document.body.classList.add('bg-black');
+    document.body.style.overflow = 'hidden';
     return () => {
-      unsubscribe();
+      document.body.classList.remove('bg-black');
+      document.body.style.overflow = '';
     };
-  }, [roomCode, rtdb]); // Dependencias del efecto
+  }, []);
 
-  // Listener separado para la pregunta actual
-  useEffect(() => {
-    if (roomCode && rtdb) {
-      // Escuchar cambios en el nodo 'currentQuestion' dentro de la sesión solo si la sesión está iniciada
-      const currentQuestionRef = ref(rtdb, `liveSessions/${roomCode}/currentQuestion`);
-      const unsubscribeQuestion = onValue(currentQuestionRef, (snapshot) => {
-        const questionData = snapshot.val();
-        if (questionData) {
-          setCurrentQuestion(questionData);
-        } else {
-          setCurrentQuestion(null); // No hay pregunta activa
-        }
-      }, (error) => { // Añadir manejo de errores al listener
-        handleError("Hubo un error al cargar la pregunta actual.", "Error fetching current question:");
-      });
-
-      return () => {
-        unsubscribeQuestion();
-      };
-    }
-  }, [roomCode, rtdb]); // Dependencias del efecto
-
-  const handleJoinSession = async (e) => {
-    e.preventDefault(); // Prevenir el comportamiento por defecto del formulario
-    if (participantName.trim() === '' || joinCodeInput.trim() === '') {
-        setError('Por favor, completa todos los campos requeridos.');
-        return;
-    }
-    if (sessionStatus !== 'waiting') {
-      alert('La sesión ya ha comenzado o terminado.');
-      return;
-    }
+  // Buscar sesión por joinCode
+  const handleFindSession = async (e) => {
+    e.preventDefault();
+    setError('');
     setIsJoining(true);
-    setError(''); // Limpiar errores anteriores
     try {
-      // Obtener los datos de la sesión una vez para validar el join code
-      const sessionSnapshot = await get(ref(rtdb, `liveSessions/${roomCode}`));
-      const sessionData = sessionSnapshot.val();
-
-      if (!sessionSnapshot.exists() || !sessionData) {
-        setError('La sesión no existe.');
-        setSessionStatus('ended'); // Asegurar que el estado cambie si la sesión no existe
+      // Buscar todas las sesiones en RTDB y encontrar la que tenga joinCode igual
+      const sessionsSnap = await get(ref(rtdb, 'liveSessions'));
+      let foundSessionId = '';
+      let foundSessionData = null;
+      if (sessionsSnap.exists()) {
+        sessionsSnap.forEach((childSnap) => {
+          const data = childSnap.val();
+          if (data.joinCode && String(data.joinCode) === String(joinCodeInput)) {
+            foundSessionId = childSnap.key;
+            foundSessionData = data;
+          }
+        });
+      }
+      if (!foundSessionId) {
+        setError('No se encontró ninguna sesión activa con ese código.');
         setIsJoining(false);
         return;
       }
-      if (parseInt(joinCodeInput) === sessionData.joinCode) {
-        const participantsRef = ref(rtdb, `liveSessions/${roomCode}/participants`);
-        await push(participantsRef, {
-          name: participantName.trim(), // Nombre del participante
-          personnelCode: personnelCode.trim(), // Código del personal
-        });
-        console.log('Unido a la sala');
-        // Considerar redirigir o cambiar estado para mostrar la sesión iniciada
-      } else {
-        setError('Código de acceso incorrecto.');
-      }
-    } catch (error) {
-      handleError('Hubo un error al unirte a la sala. Inténtalo de nuevo.', 'Error al unirse a la sala:');
+      setSessionId(foundSessionId);
+      setSessionData(foundSessionData);
+      setSessionStatus(foundSessionData.status || 'waiting');
+      setStep('lobby');
+      setIsJoining(false);
+    } catch (err) {
+      setError('Error buscando la sesión.');
+      setIsJoining(false);
     }
-    setIsJoining(false); // Asegurarse de resetear isJoining incluso en caso de error
   };
 
+  // Listener para sesión y participantes SOLO si ya se encontró la sesión
+  useEffect(() => {
+    if (!sessionId) return;
+    const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
+    const unsubscribe = onValue(sessionRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setSessionData(data);
+        setSessionStatus(data.status || 'waiting');
+      } else {
+        setSessionStatus('ended');
+        setSessionData(null);
+      }
+    });
+    const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
+    const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
+      const data = snapshot.val();
+      const list = data ? Object.values(data) : [];
+      setParticipants(list);
+    });
+    return () => {
+      unsubscribe();
+      unsubscribeParticipants();
+    };
+  }, [sessionId]);
 
+  // Listener para la pregunta actual (si se implementa gamificación)
+  useEffect(() => {
+    if (!sessionId || !rtdb) return;
+    const currentQuestionRef = ref(rtdb, `liveSessions/${sessionId}/currentQuestion`);
+    const unsubscribeQuestion = onValue(currentQuestionRef, (snapshot) => {
+      const questionData = snapshot.val();
+      if (questionData) {
+        setCurrentQuestion(questionData);
+      } else {
+        setCurrentQuestion(null);
+      }
+    });
+    return () => {
+      unsubscribeQuestion();
+    };
+  }, [sessionId, rtdb]);
+
+  // Validar código de trabajador contra cuadrilla
+  const validatePersonnelCode = async (code) => {
+    const q = query(collection(db, 'cuadrilla'), where('codigo', '==', code));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const miembro = snap.docs[0].data();
+      return miembro.nombre;
+    }
+    return null;
+  };
+
+  // Unirse a la sesión (lobby)
+  const handleJoinSession = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!personnelCode.trim()) {
+      setError('Debes ingresar tu código de trabajador.');
+      return;
+    }
+    setIsJoining(true);
+    try {
+      // Validar código de trabajador en cuadrilla
+      const nombre = await validatePersonnelCode(personnelCode.trim());
+      if (!nombre) {
+        setError('Código de trabajador no válido. Consulta a tu supervisor.');
+        setIsJoining(false);
+        return;
+      }
+      setParticipantName(nombre);
+      // Registrar participante en RTDB
+      const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
+      await push(participantsRef, {
+        name: nombre,
+        personnelCode: personnelCode.trim(),
+      });
+      setIsJoining(false);
+    } catch (error) {
+      setError('Error al unirse a la sesión.');
+      setIsJoining(false);
+    }
+  };
+
+  // Paso 1: Ingresar código de acceso
+  if (step === 'joincode') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
+          <h1 className="text-2xl font-bold text-center text-purple-700 mb-6">Unirse a una Sesión</h1>
+          <form onSubmit={handleFindSession} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código de Acceso:</label>
+              <input
+                type="number"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                value={joinCodeInput}
+                onChange={(e) => setJoinCodeInput(e.target.value)}
+                required
+                disabled={isJoining}
+              />
+            </div>
+            {error && <p className="text-red-500 text-center text-sm">{error}</p>}
+            <button
+              type="submit"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow transition"
+              disabled={isJoining}
+            >
+              {isJoining ? 'Buscando...' : 'Ingresar'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Paso 2: Lobby y formulario de trabajador
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
         <h1 className="text-3xl font-bold text-center text-purple-700 mb-6">Unirse a la Sesión</h1>
-        {/* Ya no mostramos el roomCode aquí, ya que el usuario lo ingresará */}
-        {/* <p className="text-center text-gray-600 mb-6">Código de Sala: <span className="font-mono text-lg font-semibold">{roomCode}</span></p> */}
-
         {sessionStatus === 'waiting' && (
-          <form onSubmit={handleJoinSession} className="space-y-4">
-
-            {/* Campo Código de Acceso */}
-            <div>
-              <label htmlFor="joinCode" className="block text-sm font-medium text-gray-700 mb-1">
-                Código de Acceso:
-              </label>
-              <input
-                type="number" // Usar tipo 'number' para el código numérico
-                id="joinCode"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                value={joinCodeInput}
-                onChange={(e) => setJoinCodeInput(e.target.value)}
-                required // Hacer este campo obligatorio
-                disabled={isJoining}
-              />
+          <>
+            <form onSubmit={handleJoinSession} className="space-y-4">
+              <div>
+                <label htmlFor="personnelCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Código de Trabajador:
+                </label>
+                <input
+                  type="text"
+                  id="personnelCode"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-gray-800"
+                  value={personnelCode}
+                  onChange={(e) => setPersonnelCode(e.target.value)}
+                  required
+                  disabled={isJoining}
+                />
+              </div>
+              {error && <p className="text-red-500 text-center text-sm">{error}</p>}
+              <button
+                type="submit"
+                disabled={isJoining || !personnelCode.trim()}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isJoining ? 'Uniéndose...' : 'Unirse'}
+              </button>
+              <p className="text-center text-gray-600 text-sm mt-4">Espera a que el anfitrión inicie la sesión.</p>
+            </form>
+            {/* Lista de participantes */}
+            <div className="mt-8 w-full text-center">
+              <p className="text-sm text-gray-400 mb-2">👥 Participantes en la sala:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {participants.map((p, i) => (
+                  <div key={i} className="bg-purple-700 px-3 py-1 rounded-full text-xs text-white">
+                    {p.name || `Participante ${i + 1}`}
+                    {p.personnelCode && (
+                      <span className="ml-2 text-purple-200">({p.personnelCode})</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-
-            {/* Campo Tu Nombre */}
-            <div>
-              <label htmlFor="participantName" className="block text-sm font-medium text-gray-700 mb-1">
-                Tu Nombre:
-              </label>
-              <input
-                type="text"
-                id="participantName"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-gray-800"
-                value={participantName}
-                onChange={(e) => setParticipantName(e.target.value)}
-                required // Hacer este campo obligatorio
-                disabled={isJoining}
-              />
-            </div>
-
-            {/* Campo Código de Personal */}
-            <div>
-              <label htmlFor="personnelCode" className="block text-sm font-medium text-gray-700 mb-1">
-                Código de Personal (Opcional):
-              </label>
-              <input
-                type="text" // O 'number' si es numérico y quieres restringir
-                id="personnelCode"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-gray-800"
-                value={personnelCode}
-                onChange={(e) => setPersonnelCode(e.target.value)}
-                disabled={isJoining} // Deshabilitar mientras se une
-             />
-            </div>
-
-            {/* Mensaje de error */}
-            {error && <p className="text-red-500 text-center text-sm">{error}</p>}
-
-            {/* Botón Unirse */}
-            <button
-              type="submit" // Cambiar a type="submit" para usar el form
-              disabled={isJoining || participantName.trim() === '' || joinCodeInput.trim() === ''} // Deshabilitar si falta info o uniendo
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isJoining ? 'Uniéndose...' : 'Unirse'}
-            </button>
-
-            <p className="text-center text-gray-600 text-sm mt-4">Espera a que el anfitrión inicie la sesión.</p>
-          </form>
+          </>
         )}
-
-        {/* Renderizar la pregunta actual */}
-        {sessionStatus === 'started' && currentQuestion && (
-          <div className="mt-8 text-center">
-            <h3 className="text-2xl font-bold mb-4 text-purple-700">{currentQuestion.question}</h3>
-            <div className="space-y-3">
-              {currentQuestion.options.map((option, index) => (
-                // Aquí podrías añadir lógica para seleccionar una respuesta
-                // Por ahora, solo mostramos las opciones
-                <button
-                  key={index}
-                  className="w-full text-left px-4 py-3 rounded-md shadow-sm border border-gray-300 bg-gray-100 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
-                  // onClick={() => handleAnswer(index)} // Implementar función handleAnswer
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Mensaje cuando la sesión ha terminado */}
-        {sessionStatus === 'ended' && (
-          <p className="text-center text-red-500 text-lg font-semibold mt-8">La sesión ha terminado.</p>
+        {sessionStatus === 'cancelled' && (
+          <p className="text-center text-red-500 text-lg font-semibold mt-8">La sesión fue cancelada por el anfitrión.</p>
         )}
       </div>
     </div>
-  )
+  );
+};
 
-}
 export default JoinSession;

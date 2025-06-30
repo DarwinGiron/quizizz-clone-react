@@ -69,6 +69,7 @@ function App() {
         <Route path="/evaluacion/nueva" element={<PrivateRoute><MainLayout><SeleccionTipoEvaluacion /></MainLayout></PrivateRoute>}/>
         <Route path="/asignaciones" element={<Asignaciones />} />
         <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
+        <Route path="/join" element={<JoinSession />} />
         <Route path="/join/:sessionId" element={<JoinSession />} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" />} />
