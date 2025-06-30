@@ -30,14 +30,14 @@ const CapacitacionDetail = () => {
     const fetchHorarios = async () => {
       const q = query(
         collection(db, 'capacitacion_bloques'),
-        where('capacitacion_id', '==', capacitacionId)
+        where('capacitacion_id', '==', id)
       );
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setHorarios(data);
+      setBloques(data);
     };
 
-    Promise.all([fetchCapacitacion(), fetchBloques()]).finally(() =>
+    Promise.all([fetchCapacitacion(), fetchHorarios()]).finally(() =>
       setLoading(false)
     );
   }, [id]);
