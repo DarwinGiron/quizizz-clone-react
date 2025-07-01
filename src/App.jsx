@@ -28,6 +28,8 @@ import GestionarCuadrilla from './pages/GestionarCuadrilla';
 import HorariosPorCapacitacion from './pages/HorariosPorCapacitacion';
 import AsignacionAvanzada from './pages/AsignacionAvanzada';
 import JoinSession from './pages/JoinSession';
+import SessionStatsAdmin from './pages/SessionStatsAdmin';
+import EstadisticasTotales from './pages/EstadisticasTotales';
 
 function PrivateRoute({ children }) {
   const [user, loading] = useAuthState(auth);
@@ -53,7 +55,7 @@ function App() {
         <Route path="/quiz/:id" element={<PrivateRoute><MainLayout><QuizDetail /></MainLayout></PrivateRoute>} />
         <Route path="/edit/:id" element={<PrivateRoute><MainLayout><EditQuiz /></MainLayout></PrivateRoute>} />
         <Route path="/preview/:id" element={<PrivateRoute><MainLayout><PreviewQuiz /></MainLayout></PrivateRoute>} />
-        <Route path="/live/:quizId/:sessionId" element={<PrivateRoute><MainLayout><LiveSession /></MainLayout></PrivateRoute>} />
+        <Route path="/live/:quizId/:sessionId" element={<PrivateRoute><LiveSession /></PrivateRoute>} />
         <Route path="/sessions/:sessionId" element={<PrivateRoute><MainLayout><SessionsPage /></MainLayout></PrivateRoute>} />
         <Route path="/sessions/:sessionId/report" element={<PrivateRoute><MainLayout><SessionReport /></MainLayout></PrivateRoute>} />
         <Route path="/sessions/:sessionId/stats" element={<PrivateRoute><MainLayout><SessionStats /></MainLayout></PrivateRoute>} />
@@ -71,6 +73,9 @@ function App() {
         <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
         <Route path="/join" element={<JoinSession />} />
         <Route path="/join/:sessionId" element={<JoinSession />} />
+        {/* Página de estadísticas en vivo para el admin */}
+        <Route path="/admin/session/:sessionId/stats" element={<PrivateRoute><SessionStatsAdmin /></PrivateRoute>} />
+        <Route path="/estadisticas-totales/:sessionId" element={<PrivateRoute><EstadisticasTotales /></PrivateRoute>} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

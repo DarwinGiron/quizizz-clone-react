@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, push, onValue, get, child } from 'firebase/database';
+import { ref, push, onValue, get } from 'firebase/database';
 import { db, rtdb } from '../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import QuestionCard from '../components/QuestionCard';
 
 const JoinSession = () => {
   const navigate = useNavigate();
+  // Estados principales
+  const [step, setStep] = useState('joincode'); // joincode | register | lobby | quiz | finished
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [sessionId, setSessionId] = useState('');
-  const [participantName, setParticipantName] = useState('');
-  const [sessionStatus, setSessionStatus] = useState('waiting');
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [personnelCode, setPersonnelCode] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  const [error, setError] = useState('');
   const [sessionData, setSessionData] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [step, setStep] = useState('joincode'); // 'joincode' | 'lobby'
+  const [participant, setParticipant] = useState({ name: '', type: '', personnelCode: '' });
+  const [isJoining, setIsJoining] = useState(false);
+  const [error, setError] = useState('');
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  // Estados para feedback de respuesta (deben estar al tope)
+  const [selected, setSelected] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [correctIndex, setCorrectIndex] = useState(null);
+  // Estado para cuenta regresiva en participantes
+  const [remoteCountdown, setRemoteCountdown] = useState(null);
+  // Estado para tiempo de inicio de la pregunta
+  const [questionStart, setQuestionStart] = useState(Date.now());
 
   // Ocultar sidebar/layout: body fondo oscuro y sin padding
   useEffect(() => {
@@ -33,15 +43,25 @@ const JoinSession = () => {
     e.preventDefault();
     setError('');
     setIsJoining(true);
+    const inputCode = String(joinCodeInput).trim();
+    if (!inputCode) {
+      setError('Debes ingresar un código de acceso válido.');
+      setIsJoining(false);
+      return;
+    }
     try {
-      // Buscar todas las sesiones en RTDB y encontrar la que tenga joinCode igual
       const sessionsSnap = await get(ref(rtdb, 'liveSessions'));
-      let foundSessionId = '';
+      let foundSessionId = null;
       let foundSessionData = null;
       if (sessionsSnap.exists()) {
         sessionsSnap.forEach((childSnap) => {
           const data = childSnap.val();
-          if (data.joinCode && String(data.joinCode) === String(joinCodeInput)) {
+          const dbCode = String(data.joinCode).trim();
+          if (
+            dbCode &&
+            dbCode === inputCode &&
+            (data.status === 'waiting' || data.status === 'started')
+          ) {
             foundSessionId = childSnap.key;
             foundSessionData = data;
           }
@@ -54,8 +74,7 @@ const JoinSession = () => {
       }
       setSessionId(foundSessionId);
       setSessionData(foundSessionData);
-      setSessionStatus(foundSessionData.status || 'waiting');
-      setStep('lobby');
+      setStep('register');
       setIsJoining(false);
     } catch (err) {
       setError('Error buscando la sesión.');
@@ -63,48 +82,41 @@ const JoinSession = () => {
     }
   };
 
-  // Listener para sesión y participantes SOLO si ya se encontró la sesión
+  // Listener para sesión y participantes
   useEffect(() => {
     if (!sessionId) return;
     const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
     const unsubscribe = onValue(sessionRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setSessionData(data);
-        setSessionStatus(data.status || 'waiting');
-      } else {
-        setSessionStatus('ended');
+      setSessionData(data);
+      // Solo pasar a quiz si la sesión está iniciada y la cuenta regresiva terminó
+      if (data && data.status === 'started' && (!remoteCountdown || remoteCountdown <= 0)) {
+        if (step === 'lobby') setStep('quiz');
+      }
+      if (!data) {
         setSessionData(null);
       }
     });
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
     const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.values(data) : [];
-      setParticipants(list);
+      setParticipants(data ? Object.values(data) : []);
     });
     return () => {
       unsubscribe();
       unsubscribeParticipants();
     };
-  }, [sessionId]);
+  }, [sessionId, step, remoteCountdown]);
 
-  // Listener para la pregunta actual (si se implementa gamificación)
+  // Escuchar la cuenta regresiva desde RTDB (para espectadores)
   useEffect(() => {
-    if (!sessionId || !rtdb) return;
-    const currentQuestionRef = ref(rtdb, `liveSessions/${sessionId}/currentQuestion`);
-    const unsubscribeQuestion = onValue(currentQuestionRef, (snapshot) => {
-      const questionData = snapshot.val();
-      if (questionData) {
-        setCurrentQuestion(questionData);
-      } else {
-        setCurrentQuestion(null);
-      }
+    if (!sessionId) return;
+    const countdownRef = ref(rtdb, `liveSessions/${sessionId}/countdown`);
+    const unsubscribe = onValue(countdownRef, (snapshot) => {
+      setRemoteCountdown(snapshot.val());
     });
-    return () => {
-      unsubscribeQuestion();
-    };
-  }, [sessionId, rtdb]);
+    return () => unsubscribe();
+  }, [sessionId]);
 
   // Validar código de trabajador contra cuadrilla
   const validatePersonnelCode = async (code) => {
@@ -117,59 +129,90 @@ const JoinSession = () => {
     return null;
   };
 
-  // Unirse a la sesión (lobby)
-  const handleJoinSession = async (e) => {
+  // Registrar participante
+  const handleRegisterParticipant = async (e) => {
     e.preventDefault();
     setError('');
-    if (!personnelCode.trim()) {
-      setError('Debes ingresar tu código de trabajador.');
-      return;
-    }
     setIsJoining(true);
-    try {
-      // Validar código de trabajador en cuadrilla
-      const nombre = await validatePersonnelCode(personnelCode.trim());
-      if (!nombre) {
+    let nombre = '';
+    let tipo = '';
+    let code = '';
+    // Si el valor es numérico y tiene longitud >= 4, se asume código de trabajador
+    if (/^\d{4,}$/.test(participant.name.trim())) {
+      nombre = await validatePersonnelCode(participant.name.trim());
+      if (nombre) {
+        tipo = 'trabajador';
+        code = participant.name.trim();
+      } else {
         setError('Código de trabajador no válido. Consulta a tu supervisor.');
         setIsJoining(false);
         return;
       }
-      setParticipantName(nombre);
-      // Registrar participante en RTDB
-      const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
-      await push(participantsRef, {
-        name: nombre,
-        personnelCode: personnelCode.trim(),
-      });
-      setIsJoining(false);
-    } catch (error) {
-      setError('Error al unirse a la sesión.');
-      setIsJoining(false);
+    } else {
+      nombre = participant.name.trim();
+      tipo = 'casual';
+      code = '';
     }
+    setParticipant({ name: nombre, type: tipo, personnelCode: code });
+    // Registrar en RTDB
+    await push(ref(rtdb, `liveSessions/${sessionId}/participants`), {
+      name: nombre,
+      type: tipo,
+      personnelCode: code,
+    });
+    setStep('lobby');
+    setIsJoining(false);
   };
+
+  // Cargar preguntas cuando la sesión inicie
+  useEffect(() => {
+    const cargarPreguntas = async () => {
+      if (step === 'quiz' && sessionData?.quizId) {
+        const quizDocRef = doc(db, 'quizzes', sessionData.quizId);
+        const quizDocSnap = await getDoc(quizDocRef);
+        if (quizDocSnap.exists() && quizDocSnap.data().questions) {
+          setQuizQuestions(quizDocSnap.data().questions);
+          setCurrentIndex(0);
+          setAnswers([]);
+        }
+      }
+    };
+    cargarPreguntas();
+  }, [step, sessionData]);
+
+  // Resetear feedback al cambiar de pregunta
+  useEffect(() => {
+    setSelected(null);
+    setShowFeedback(false);
+    if (quizQuestions.length > 0 && currentIndex < quizQuestions.length) {
+      const q = quizQuestions[currentIndex];
+      setCorrectIndex(typeof q.correct === 'number' ? q.correct : (q.correct ? q.correct : 0));
+      setQuestionStart(Date.now()); // Reiniciar tiempo de inicio aquí
+    }
+  }, [currentIndex, quizQuestions]);
 
   // Paso 1: Ingresar código de acceso
   if (step === 'joincode') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
-        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
-          <h1 className="text-2xl font-bold text-center text-purple-700 mb-6">Unirse a una Sesión</h1>
-          <form onSubmit={handleFindSession} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Código de Acceso:</label>
-              <input
-                type="number"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                value={joinCodeInput}
-                onChange={(e) => setJoinCodeInput(e.target.value)}
-                required
-                disabled={isJoining}
-              />
-            </div>
-            {error && <p className="text-red-500 text-center text-sm">{error}</p>}
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-md flex flex-col items-center backdrop-blur-md border border-purple-400">
+          <h1 className="text-3xl font-extrabold text-purple-300 mb-2 tracking-wide text-center">¡Únete a la partida!</h1>
+          <p className="text-md text-purple-100 mb-6 text-center">Ingresa el código de acceso que te dio el anfitrión</p>
+          <form onSubmit={handleFindSession} className="w-full flex flex-col gap-4 items-center">
+            <input
+              type="number"
+              className="w-full px-6 py-3 text-2xl rounded-xl border-2 border-purple-400 bg-black bg-opacity-30 text-white text-center focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-purple-300"
+              placeholder="Código de acceso"
+              value={joinCodeInput}
+              onChange={(e) => setJoinCodeInput(e.target.value)}
+              required
+              disabled={isJoining}
+              autoFocus
+            />
+            {error && <p className="text-red-400 text-center text-base">{error}</p>}
             <button
               type="submit"
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow transition"
+              className="w-full bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg text-xl transition-all"
               disabled={isJoining}
             >
               {isJoining ? 'Buscando...' : 'Ingresar'}
@@ -180,60 +223,176 @@ const JoinSession = () => {
     );
   }
 
-  // Paso 2: Lobby y formulario de trabajador
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
-        <h1 className="text-3xl font-bold text-center text-purple-700 mb-6">Unirse a la Sesión</h1>
-        {sessionStatus === 'waiting' && (
-          <>
-            <form onSubmit={handleJoinSession} className="space-y-4">
-              <div>
-                <label htmlFor="personnelCode" className="block text-sm font-medium text-gray-700 mb-1">
-                  Código de Trabajador:
-                </label>
-                <input
-                  type="text"
-                  id="personnelCode"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-gray-800"
-                  value={personnelCode}
-                  onChange={(e) => setPersonnelCode(e.target.value)}
-                  required
-                  disabled={isJoining}
-                />
-              </div>
-              {error && <p className="text-red-500 text-center text-sm">{error}</p>}
-              <button
-                type="submit"
-                disabled={isJoining || !personnelCode.trim()}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isJoining ? 'Uniéndose...' : 'Unirse'}
-              </button>
-              <p className="text-center text-gray-600 text-sm mt-4">Espera a que el anfitrión inicie la sesión.</p>
-            </form>
-            {/* Lista de participantes */}
-            <div className="mt-8 w-full text-center">
-              <p className="text-sm text-gray-400 mb-2">👥 Participantes en la sala:</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {participants.map((p, i) => (
-                  <div key={i} className="bg-purple-700 px-3 py-1 rounded-full text-xs text-white">
-                    {p.name || `Participante ${i + 1}`}
-                    {p.personnelCode && (
-                      <span className="ml-2 text-purple-200">({p.personnelCode})</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+  // Paso 2: Registro de participante
+  if (step === 'register') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-md flex flex-col items-center backdrop-blur-md border border-purple-400">
+          <h2 className="text-2xl font-bold text-purple-200 mb-2 text-center">¿Cómo te llamas?</h2>
+          <form
+            onSubmit={handleRegisterParticipant}
+            className="w-full flex flex-col gap-4 items-center"
+          >
+            <input
+              type="text"
+              className="w-full px-6 py-3 text-2xl rounded-xl border-2 border-purple-400 bg-black bg-opacity-30 text-white text-center focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-purple-300"
+              placeholder="Tu nombre (si eres trabajador, ingresa tu código)"
+              value={participant.name}
+              onChange={e => setParticipant({ ...participant, name: e.target.value, personnelCode: '' })}
+              required
+              autoFocus
+            />
+            {error && <p className="text-red-400 text-center text-base">{error}</p>}
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg text-xl transition-all"
+              disabled={isJoining}
+            >
+              {isJoining ? 'Registrando...' : 'Entrar'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Paso 3: Lobby de espera
+  if (step === 'lobby') {
+    const puedeEmpezar = sessionData?.status === 'started';
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-lg flex flex-col items-center backdrop-blur-md border border-purple-400">
+          <h2 className="text-3xl font-extrabold text-purple-200 mb-4 text-center">¡Bienvenido, {participant.name}!</h2>
+          <div className="w-full flex flex-col items-center mb-6">
+            <p className="text-lg text-purple-100 mb-2">
+              {puedeEmpezar ? '¡El anfitrión ha iniciado la evaluación! Espera un momento...' : 'Esperando a que el anfitrión empiece...'}
+            </p>
+            <div className="flex flex-row gap-2 mt-2">
+              <span className="bg-purple-700 px-4 py-2 rounded-full text-lg font-bold tracking-widest text-white shadow">{sessionData?.joinCode}</span>
             </div>
-          </>
-        )}
-        {sessionStatus === 'cancelled' && (
-          <p className="text-center text-red-500 text-lg font-semibold mt-8">La sesión fue cancelada por el anfitrión.</p>
+          </div>
+        </div>
+        {(remoteCountdown && remoteCountdown > 0) && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50 animate-fadeIn">
+            <div className="flex flex-col items-center">
+              <span className="text-6xl font-extrabold text-white animate-pulse mb-4">¡A la cuenta de!</span>
+              <span className="text-[8rem] font-extrabold text-purple-400 animate-bounce">{remoteCountdown}</span>
+            </div>
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Paso 4: Quiz a ritmo del estudiante
+  if (step === 'quiz' && quizQuestions.length > 0 && currentIndex < quizQuestions.length) {
+    const handleAnswer = (i) => {
+      if (selected !== null) return;
+      setSelected(i);
+      setShowFeedback(true);
+      // Calcular tiempo de respuesta
+      const answerTime = (Date.now() - questionStart) / 1000;
+      setTimeout(() => {
+        setShowFeedback(false);
+        setSelected(null);
+        if (currentIndex + 1 === quizQuestions.length) {
+          setStep('finished');
+        } else {
+          setCurrentIndex(currentIndex + 1);
+        }
+      }, 2000);
+      const newAnswers = [...answers];
+      newAnswers[currentIndex] = { answer: i, time: answerTime };
+      setAnswers(newAnswers);
+      // Guardar en Firebase
+      if (sessionId && participant.name) {
+        const answersRef = ref(rtdb, `liveSessions/${sessionId}/answers/${participant.name}`);
+        // Guardar el array completo de respuestas del participante
+        // (esto permite que el admin vea el avance en tiempo real)
+        import('firebase/database').then(({ set }) => {
+          set(answersRef, newAnswers);
+        });
+      }
+    };
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-2xl flex flex-col items-center backdrop-blur-md border border-purple-400 animate-fadeIn">
+          <h2 className="text-2xl font-bold text-purple-200 mb-4 text-center animate-bounce">Pregunta {currentIndex + 1} de {quizQuestions.length}</h2>
+          <div className="w-full mb-6">
+            <div className="bg-purple-800 rounded-xl p-6 text-xl text-white text-center mb-4 min-h-[80px] flex items-center justify-center animate-fadeInDown">
+              {q.text || q.pregunta || 'Pregunta'}
+            </div>
+          </div>
+          <div className="mt-6 w-full flex flex-col gap-4">
+            {q.options.map((opt, i) => {
+              let btnClass = 'w-full py-3 rounded-xl text-lg font-semibold shadow transition-all border-2 border-purple-400 bg-black bg-opacity-40 animate-fadeInUp';
+              if (showFeedback && selected !== null) {
+                if (i === correctIndex) btnClass += ' bg-green-600 text-white';
+                else if (i === selected) btnClass += ' bg-red-600 text-white';
+                else btnClass += ' text-purple-100 opacity-60';
+              } else if (selected === i) {
+                btnClass += ' bg-purple-700 text-white';
+              } else {
+                btnClass += ' hover:bg-purple-600 text-purple-100';
+              }
+              return (
+                <button
+                  key={i}
+                  className={btnClass}
+                  onClick={() => handleAnswer(i)}
+                  disabled={selected !== null}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Paso 5: Finalizado
+  if (step === 'finished') {
+    // Página de estadísticas totales
+    // Calcular estadísticas del participante
+    const total = quizQuestions.length;
+    const correct = answers.filter(a => a && typeof a.answer !== 'undefined' && quizQuestions[answers.indexOf(a)]?.correct === a.answer).length;
+    const incorrect = answers.filter(a => a && typeof a.answer !== 'undefined' && quizQuestions[answers.indexOf(a)]?.correct !== a.answer).length;
+    const precision = total > 0 ? ((correct / total) * 100).toFixed(1) : '0.0';
+    const totalTime = answers.reduce((acc, a) => acc + (a && a.time ? a.time : 0), 0).toFixed(1);
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-lg flex flex-col items-center backdrop-blur-md border border-purple-400">
+          <h2 className="text-3xl font-extrabold text-purple-200 mb-4 text-center">¡Examen finalizado!</h2>
+          <p className="text-lg text-purple-100 mb-6">Gracias por participar, {participant.name}.</p>
+          <div className="w-full flex flex-col items-center gap-2 mt-4">
+            <div className="text-xl font-bold text-blue-300">Tus estadísticas</div>
+            <div className="flex flex-row gap-6 mt-2">
+              <div className="flex flex-col items-center">
+                <span className="text-green-400 font-bold text-2xl">{correct}</span>
+                <span className="text-xs text-gray-200">Correctas</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-red-400 font-bold text-2xl">{incorrect}</span>
+                <span className="text-xs text-gray-200">Incorrectas</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-blue-400 font-bold text-2xl">{precision}%</span>
+                <span className="text-xs text-gray-200">Precisión</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-yellow-300 font-bold text-2xl">{totalTime}s</span>
+                <span className="text-xs text-gray-200">Tiempo total</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default JoinSession;

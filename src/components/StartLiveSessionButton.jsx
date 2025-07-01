@@ -8,19 +8,22 @@ const StartLiveSessionButton = ({ quizId }) => {
   const navigate = useNavigate();
 
   const startSession = async () => {
-    const joinCode = Math.floor(100000 + Math.random() * 900000); // Generate numerical join code
-    const sessionId = `${quizId}-${Date.now()}`; // Generate a unique session ID
+    const joinCode = Math.floor(100000 + Math.random() * 900000); // Generar código de unión
+    const sessionId = `${quizId}-${Date.now()}`; // ID único
 
-    // Save session data to Realtime Database
+    // Guardar sesión en RTDB y esperar a que se complete antes de navegar
     const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
     await set(sessionRef, {
       quizId: quizId,
-      joinCode: joinCode, // Save joinCode as a number
-      status: 'waiting', // Initial status
-      createdAt: Date.now(), // Use timestamp
-    }); // Note: We are primarily using RTDB for live session data
+      joinCode: joinCode,
+      status: 'waiting',
+      createdAt: Date.now(),
+    });
 
-    navigate(`/live/${quizId}/${sessionId}`); // Navigate using quizId and the generated sessionId
+    // Esperar un poco más para asegurar que RTDB propague los datos
+    setTimeout(() => {
+      navigate(`/live/${quizId}/${sessionId}`);
+    }, 900); // 900ms para mayor robustez
   };
 
   return (
