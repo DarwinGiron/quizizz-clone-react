@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  collection, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc
+  collection, getDocs, query, where, doc, updateDoc, arrayUnion, arrayRemove, getDoc
 } from 'firebase/firestore';
 import { useParams } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { format, parse, startOfWeek, addDays, isWithinInterval } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Sidebar from '../components/Sidebar';
 import BackButton from '../components/BackButton';
@@ -22,7 +22,6 @@ export default function AsignacionIntuitiva() {
   const [loading, setLoading] = useState(true);
   
   // Estados para la vista
-  const [vistaActual, setVistaActual] = useState('semana'); // 'dia' | 'semana'
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [filtroArea, setFiltroArea] = useState('');
   const [filtroMaquina, setFiltroMaquina] = useState('');
@@ -248,12 +247,6 @@ export default function AsignacionIntuitiva() {
     return cuadrillaData;
   };
 
-  // Obtener días de la semana actual
-  const getDiasSemana = () => {
-    const inicioSemana = startOfWeek(fechaSeleccionada, { weekStartsOn: 1 });
-    return Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i));
-  };
-
   // Obtener bloques para un día específico
   const getBloquesDelDia = (fecha) => {
     const fechaStr = formatLocalDate(fecha);
@@ -399,6 +392,53 @@ export default function AsignacionIntuitiva() {
     setDraggedPerson(null);
   };
 
+  // Función para eliminar participante de un bloque
+  const handleEliminarParticipante = async (bloque, participante) => {
+    // Confirmación antes de eliminar
+    if (!window.confirm(`¿Estás seguro de que quieres desasignar a ${participante.nombre} del horario ${bloque.hora_inicio} - ${bloque.hora_fin}?`)) {
+      return;
+    }
+
+    try {
+      // Remover de Firebase usando arrayRemove
+      const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
+      await updateDoc(bloqueRef, {
+        participantes: arrayRemove(participante),
+      });
+
+      // Actualizar estado local del bloque
+      setBloques(prev => prev.map(b => {
+        if (b.id === bloque.id) {
+          return {
+            ...b,
+            participantes: (b.participantes || []).filter(p => p.id !== participante.id),
+          };
+        }
+        return b;
+      }));
+
+      // Reagregar la persona a su cuadrilla original
+      const supervisor = supervisores.find(s => 
+        s.id === participante.supervisor_id || 
+        (cuadrillas[s.id] && cuadrillas[s.id].some(p => p.codigo === participante.codigo))
+      );
+      
+      if (supervisor) {
+        setCuadrillas(prev => ({
+          ...prev,
+          [supervisor.id]: [...(prev[supervisor.id] || []), participante]
+        }));
+      }
+
+      // Mostrar mensaje de éxito
+      console.log(`✅ ${participante.nombre} desasignado del horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+
+    } catch (error) {
+      console.error('Error al desasignar:', error);
+      alert('Error al desasignar la persona. Por favor, intente nuevamente.');
+    }
+  };
+
   // Obtener color para el estado del bloque
   const getColorBloque = (bloque) => {
     const ocupados = bloque.participantes?.length || 0;
@@ -442,31 +482,8 @@ export default function AsignacionIntuitiva() {
             </p>
           )}
           
-          {/* Controles de vista y filtros */}
+          {/* Controles de filtros */}
           <div className="flex flex-wrap gap-4 items-center">
-            {/* Toggle vista */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setVistaActual('dia')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                  vistaActual === 'dia' 
-                    ? 'bg-white text-purple-700 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                📅 Vista Día
-              </button>
-              <button
-                onClick={() => setVistaActual('semana')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                  vistaActual === 'semana' 
-                    ? 'bg-white text-purple-700 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                📆 Vista Semana
-              </button>
-            </div>
 
             {/* Filtro por área */}
             <div className="flex items-center gap-2">
@@ -665,240 +682,139 @@ export default function AsignacionIntuitiva() {
 
           {/* Panel de Horarios */}
           <div className="lg:col-span-3">
-            {vistaActual === 'semana' ? (
-              // Vista Semanal
-              <div className="bg-white rounded-lg shadow-sm p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    📆 Semana del {format(getDiasSemana()[0], 'dd MMM', { locale: es })} - {format(getDiasSemana()[6], 'dd MMM yyyy', { locale: es })}
-                  </h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFechaSeleccionada(addDays(fechaSeleccionada, -7))}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-                    >
-                      ← Anterior
-                    </button>
-                    <button
-                      onClick={() => setFechaSeleccionada(addDays(fechaSeleccionada, 7))}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-                    >
-                      Siguiente →
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-7 gap-2">
-                  {getDiasSemana().map(dia => {
-                    const bloquesDelDia = getBloquesDelDia(dia);
-                    return (
-                      <div key={dia.toISOString()} className="border border-gray-200 rounded-lg p-2">
-                        <div className="text-center font-medium text-sm text-gray-700 mb-2 border-b pb-1">
-                          {format(dia, 'EEE dd', { locale: es })}
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {bloquesDelDia.map(bloque => {
-                            const ocupados = bloque.participantes?.length || 0;
-                            const porcentajeOcupacion = (ocupados / bloque.cupo_disponible) * 100;
-                            const estaLleno = ocupados >= bloque.cupo_disponible;
-                            
-                            return (
-                              <div
-                                key={bloque.id}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, bloque)}
-                                className={`p-2 rounded-lg border-2 transition-all hover:shadow-sm ${
-                                  draggedPerson && !estaLleno ? 'border-dashed border-purple-400 bg-purple-50' : ''
-                                } ${getColorBloque(bloque)} ${
-                                  estaLleno ? 'cursor-not-allowed' : 'cursor-pointer'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="text-xs font-medium text-gray-700">
-                                    ⏰ {bloque.hora_inicio} - {bloque.hora_fin}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {ocupados}/{bloque.cupo_disponible}
-                                  </div>
-                                </div>
-                                
-                                {/* Barra de progreso */}
-                                <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
-                                  <div 
-                                    className={`h-1.5 rounded-full transition-all ${
-                                      porcentajeOcupacion === 0 ? 'bg-gray-300' :
-                                      porcentajeOcupacion < 50 ? 'bg-green-500' :
-                                      porcentajeOcupacion < 80 ? 'bg-yellow-500' :
-                                      porcentajeOcupacion < 100 ? 'bg-orange-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${Math.max(porcentajeOcupacion, 5)}%` }}
-                                  ></div>
-                                </div>
-                                
-                                {/* Participantes asignados */}
-                                {bloque.participantes && bloque.participantes.length > 0 && (
-                                  <div className="space-y-1">
-                                    {bloque.participantes.slice(0, 3).map(p => (
-                                      <div key={p.id} className="text-xs bg-white bg-opacity-80 px-2 py-1 rounded border border-gray-200 flex items-center justify-between">
-                                        <span className="font-medium truncate flex-1">{p.nombre}</span>
-                                        <span className="text-gray-500 ml-1">{p.area || p.codigo}</span>
-                                      </div>
-                                    ))}
-                                    {bloque.participantes.length > 3 && (
-                                      <div className="text-xs text-gray-600 text-center py-1 bg-gray-100 rounded">
-                                        +{bloque.participantes.length - 3} más...
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                {/* Estado visual */}
-                                {estaLleno && (
-                                  <div className="text-xs text-center mt-2 text-red-600 font-medium">
-                                    🚫 Completo
-                                  </div>
-                                )}
-                                
-                                {!estaLleno && draggedPerson && (
-                                  <div className="text-xs text-center mt-2 text-purple-600 font-medium">
-                                    ⬇️ Suelta aquí
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                          
-                          {bloquesDelDia.length === 0 && (
-                            <div className="text-center py-4 text-gray-400 text-xs">
-                              Sin horarios
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+            {/* Vista de Día */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  📅 {format(fechaSeleccionada, 'EEEE, dd MMMM yyyy', { locale: es })}
+                </h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFechaSeleccionada(addDays(fechaSeleccionada, -1))}
+                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+                  >
+                    ← Día anterior
+                  </button>
+                  <button
+                    onClick={() => setFechaSeleccionada(new Date())}
+                    className="px-3 py-1 bg-purple-100 hover:bg-purple-200 rounded text-sm text-purple-700"
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    onClick={() => setFechaSeleccionada(addDays(fechaSeleccionada, 1))}
+                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+                  >
+                    Día siguiente →
+                  </button>
                 </div>
               </div>
-            ) : (
-              // Vista de Día
-              <div className="bg-white rounded-lg shadow-sm p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    📅 {format(fechaSeleccionada, 'EEEE, dd MMMM yyyy', { locale: es })}
-                  </h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFechaSeleccionada(addDays(fechaSeleccionada, -1))}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-                    >
-                      ← Día anterior
-                    </button>
-                    <button
-                      onClick={() => setFechaSeleccionada(new Date())}
-                      className="px-3 py-1 bg-purple-100 hover:bg-purple-200 rounded text-sm text-purple-700"
-                    >
-                      Hoy
-                    </button>
-                    <button
-                      onClick={() => setFechaSeleccionada(addDays(fechaSeleccionada, 1))}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-                    >
-                      Día siguiente →
-                    </button>
-                  </div>
-                </div>
 
-                {/* Horarios del día */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {getBloquesDelDia(fechaSeleccionada).map(bloque => {
-                    const ocupados = bloque.participantes?.length || 0;
-                    const porcentajeOcupacion = (ocupados / bloque.cupo_disponible) * 100;
-                    const estaLleno = ocupados >= bloque.cupo_disponible;
-                    
-                    return (
-                      <div
-                        key={bloque.id}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, bloque)}
-                        className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
-                          draggedPerson && !estaLleno ? 'border-dashed border-purple-400 bg-purple-50' : ''
-                        } ${getColorBloque(bloque)} ${
-                          estaLleno ? 'cursor-not-allowed' : 'cursor-pointer'
-                        }`}
-                      >
-                        {/* Header del bloque */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="text-sm font-bold text-gray-800">
-                            ⏰ {bloque.hora_inicio} - {bloque.hora_fin}
-                          </div>
-                          <div className="text-sm font-medium text-gray-600">
-                            {ocupados}/{bloque.cupo_disponible}
-                          </div>
+              {/* Horarios del día */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {getBloquesDelDia(fechaSeleccionada).map(bloque => {
+                  const ocupados = bloque.participantes?.length || 0;
+                  const porcentajeOcupacion = (ocupados / bloque.cupo_disponible) * 100;
+                  const estaLleno = ocupados >= bloque.cupo_disponible;
+                  
+                  return (
+                    <div
+                      key={bloque.id}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, bloque)}
+                      className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
+                        draggedPerson && !estaLleno ? 'border-dashed border-purple-400 bg-purple-50' : ''
+                      } ${getColorBloque(bloque)} ${
+                        estaLleno ? 'cursor-not-allowed' : 'cursor-pointer'
+                      }`}
+                    >
+                      {/* Header del bloque */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-bold text-gray-800">
+                          ⏰ {bloque.hora_inicio} - {bloque.hora_fin}
                         </div>
-                        
-                        {/* Barra de progreso */}
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-                          <div 
-                            className={`h-2 rounded-full transition-all ${
-                              porcentajeOcupacion === 0 ? 'bg-gray-300' :
-                              porcentajeOcupacion < 50 ? 'bg-green-500' :
-                              porcentajeOcupacion < 80 ? 'bg-yellow-500' :
-                              porcentajeOcupacion < 100 ? 'bg-orange-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${Math.max(porcentajeOcupacion, 5)}%` }}
-                          ></div>
+                        <div className="text-sm font-medium text-gray-600">
+                          {ocupados}/{bloque.cupo_disponible}
                         </div>
-                        
-                        {/* Personal asignado - Cards de colores */}
-                        <div className="space-y-2 mb-3">
-                          {bloque.participantes && bloque.participantes.length > 0 ? (
-                            bloque.participantes.map(p => (
-                              <div key={p.id} className="bg-green-100 border-2 border-green-400 text-green-900 px-2 py-1 rounded-lg">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-xs">{p.nombre}</span>
+                      </div>
+                      
+                      {/* Barra de progreso */}
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            porcentajeOcupacion === 0 ? 'bg-gray-300' :
+                            porcentajeOcupacion < 50 ? 'bg-green-500' :
+                            porcentajeOcupacion < 80 ? 'bg-yellow-500' :
+                            porcentajeOcupacion < 100 ? 'bg-orange-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.max(porcentajeOcupacion, 5)}%` }}
+                        ></div>
+                      </div>
+                      
+                      {/* Personal asignado - Cards de colores */}
+                      <div className="space-y-2 mb-3">
+                        {bloque.participantes && bloque.participantes.length > 0 ? (
+                          bloque.participantes.map(p => (
+                            <div key={p.id} className="bg-green-100 border-2 border-green-400 text-green-900 px-2 py-2 rounded-lg group">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm truncate">{p.nombre}</div>
+                                </div>
+                                <div className="flex items-center gap-2">
                                   <span className="text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">
                                     ✅
                                   </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEliminarParticipante(bloque, p);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full p-1"
+                                    title={`Desasignar a ${p.nombre}`}
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
                                 </div>
                               </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-6 text-gray-400">
-                              <div className="text-2xl mb-2">👥</div>
-                              <div className="text-sm">Sin personal asignado</div>
                             </div>
-                          )}
-                        </div>
-                        
-                        {/* Estado del bloque */}
-                        {estaLleno ? (
-                          <div className="text-center py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium">
-                            🚫 Bloque completo
-                          </div>
-                        ) : draggedPerson ? (
-                          <div className="text-center py-2 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
-                            ⬇️ Suelta aquí para asignar
-                          </div>
+                          ))
                         ) : (
-                          <div className="text-center py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
-                            🖱️ Arrastra personal aquí
+                          <div className="text-center py-6 text-gray-400">
+                            <div className="text-2xl mb-2">👥</div>
+                            <div className="text-sm">Sin personal asignado</div>
                           </div>
                         )}
                       </div>
-                    );
-                  })}
-                  
-                  {getBloquesDelDia(fechaSeleccionada).length === 0 && (
-                    <div className="col-span-full text-center py-12 text-gray-400">
-                      <div className="text-4xl mb-4">📅</div>
-                      <h3 className="text-lg font-medium mb-2">No hay horarios programados</h3>
-                      <p className="text-sm">No se encontraron bloques de capacitación para este día.</p>
+                      
+                      {/* Estado del bloque */}
+                      {estaLleno ? (
+                        <div className="text-center py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium">
+                          🚫 Bloque completo
+                        </div>
+                      ) : draggedPerson ? (
+                        <div className="text-center py-2 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
+                          ⬇️ Suelta aquí para asignar
+                        </div>
+                      ) : (
+                        <div className="text-center py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+                          🖱️ Arrastra personal aquí
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })}
+                
+                {getBloquesDelDia(fechaSeleccionada).length === 0 && (
+                  <div className="col-span-full text-center py-12 text-gray-400">
+                    <div className="text-4xl mb-4">📅</div>
+                    <h3 className="text-lg font-medium mb-2">No hay horarios programados</h3>
+                    <p className="text-sm">No se encontraron bloques de capacitación para este día.</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -914,7 +830,7 @@ export default function AsignacionIntuitiva() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-100 border-2 border-green-400 rounded flex-shrink-0"></div>
-                <span>Personal asignado (verde) - Ya tiene horario</span>
+                <span>Personal asignado (verde) - Pasa el cursor para desasignar ❌</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-50 border border-green-200 rounded flex-shrink-0"></div>
@@ -931,6 +847,15 @@ export default function AsignacionIntuitiva() {
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-red-50 border border-red-200 rounded flex-shrink-0"></div>
                 <span>Horario completo (100%)</span>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg mt-3 border border-blue-200">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <span className="text-lg">💡</span>
+                  <span className="font-medium">Tip:</span>
+                </div>
+                <div className="text-blue-700 text-xs mt-1">
+                  Para desasignar personal, pasa el cursor sobre el nombre y haz clic en la ❌ que aparece.
+                </div>
               </div>
             </div>
           </div>
