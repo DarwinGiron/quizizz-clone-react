@@ -5,11 +5,27 @@ import {
 import { useParams } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import Calendar from 'react-calendar';
 import Sidebar from '../components/Sidebar';
 import BackButton from '../components/BackButton';
 import 'react-calendar/dist/Calendar.css';
+
+// Función auxiliar para crear fechas locales sin problemas de zona horaria
+const createLocalDate = (dateString) => {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day); // month - 1 porque los meses en JS van de 0-11
+};
+
+// Función auxiliar para formatear fecha manteniendo zona horaria local
+const formatLocalDate = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function AsignacionAvanzada() {
   const { capacitacionId } = useParams();
@@ -191,12 +207,16 @@ export default function AsignacionAvanzada() {
           <div>
             <h2 className="text-sm font-semibold mb-1 text-gray-700">📅 Días habilitados</h2>
             <Calendar
-              onChange={(date) => setDiaSeleccionado(format(date, 'yyyy-MM-dd'))}
-              value={diaSeleccionado ? new Date(diaSeleccionado) : null}
+              onChange={(date) => {
+                const formattedDate = formatLocalDate(date);
+                console.log('Fecha seleccionada:', date, 'Formateada:', formattedDate);
+                setDiaSeleccionado(formattedDate);
+              }}
+              value={createLocalDate(diaSeleccionado)}
               tileDisabled={({ date, view }) =>
                 view === 'month' &&
-                (!diasUnicos.includes(format(date, 'yyyy-MM-dd')) ||
-                 fechasSaturadas.includes(format(date, 'yyyy-MM-dd')))
+                (!diasUnicos.includes(formatLocalDate(date)) ||
+                 fechasSaturadas.includes(formatLocalDate(date)))
               }
             />
           </div>
