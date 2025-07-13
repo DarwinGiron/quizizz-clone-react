@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { format } from 'date-fns';
+import BackButton from '../components/BackButton';
 
 const CapacitacionDetail = () => {
   const { id } = useParams();
@@ -51,6 +52,7 @@ const CapacitacionDetail = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      <BackButton to="/capacitaciones" label="Volver a Capacitaciones" className="mb-6" />
       <h1 className="text-3xl font-bold mb-2">{capacitacion.titulo}</h1>
       <p className="text-gray-600 mb-1">{capacitacion.descripcion}</p>
       <p className="text-sm mb-1">

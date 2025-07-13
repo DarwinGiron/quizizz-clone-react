@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase/config';
+import BackButton from './BackButton';
 
 const SeleccionTipoEvaluacion = () => {
   const [modo, setModo] = useState(null);
@@ -32,6 +33,7 @@ const SeleccionTipoEvaluacion = () => {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
+      <BackButton to="/myquizzes" label="Volver a Mis Quizzes" className="mb-6" />
       <h1 className="text-2xl font-bold mb-4">¿Cómo deseas crear esta evaluación?</h1>
 
       <div className="space-y-4">

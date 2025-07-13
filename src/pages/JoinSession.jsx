@@ -4,29 +4,63 @@ import { ref, push, onValue, get } from 'firebase/database';
 import { db, rtdb } from '../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import QuestionCard from '../components/QuestionCard';
+import confetti from '../utils/confetti';
 
 const JoinSession = () => {
   const navigate = useNavigate();
   // Estados principales
-  const [step, setStep] = useState('joincode'); // joincode | register | lobby | quiz | finished
+  const [step, setStep] = useState(() => localStorage.getItem('quizizz_step') || 'joincode');
   const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [sessionId, setSessionId] = useState('');
+  const [sessionId, setSessionId] = useState(() => localStorage.getItem('quizizz_sessionId') || '');
   const [sessionData, setSessionData] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [participant, setParticipant] = useState({ name: '', type: '', personnelCode: '' });
+  const [participant, setParticipant] = useState(() => {
+    try {
+      const saved = localStorage.getItem('quizizz_participant');
+      return saved ? JSON.parse(saved) : { name: '', type: '', personnelCode: '' };
+    } catch {
+      return { name: '', type: '', personnelCode: '' };
+    }
+  });
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState('');
   const [quizQuestions, setQuizQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    // Siempre empezar desde 0 para nuevas sesiones
+    return 0;
+  });
+  const [answers, setAnswers] = useState(() => {
+    // Siempre empezar con respuestas vacías para nuevas sesiones
+    return [];
+  });
   // Estados para feedback de respuesta (deben estar al tope)
   const [selected, setSelected] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [correctIndex, setCorrectIndex] = useState(null);
   // Estado para cuenta regresiva en participantes
   const [remoteCountdown, setRemoteCountdown] = useState(null);
+  // Estado para simular cuenta regresiva cuando se une a media partida
+  const [simulatedCountdown, setSimulatedCountdown] = useState(null);
+  const [showSimulatedCountdown, setShowSimulatedCountdown] = useState(false);
   // Estado para tiempo de inicio de la pregunta
   const [questionStart, setQuestionStart] = useState(Date.now());
+  // Estado para puntaje y confeti
+  const [score, setScore] = useState(null);
+  const [showScore, setShowScore] = useState(false);
+
+  // Hook centralizado para manejar la persistencia del paso (step)
+  useEffect(() => {
+    if (['joincode', 'register', 'lobby', 'quiz'].includes(step)) {
+      localStorage.setItem('quizizz_step', step);
+    } else if (step === 'finished') {
+      // Limpiar todo al finalizar
+      localStorage.removeItem('quizizz_step');
+      localStorage.removeItem('quizizz_sessionId');
+      localStorage.removeItem('quizizz_participant');
+      localStorage.removeItem('quizizz_currentIndex');
+      localStorage.removeItem('quizizz_answers');
+    }
+  }, [step]);
 
   // Ocultar sidebar/layout: body fondo oscuro y sin padding
   useEffect(() => {
@@ -75,6 +109,12 @@ const JoinSession = () => {
       setSessionId(foundSessionId);
       setSessionData(foundSessionData);
       setStep('register');
+      // Limpiar progreso anterior y persistir nueva sesión
+      setCurrentIndex(0);
+      setAnswers([]);
+      localStorage.removeItem('quizizz_currentIndex');
+      localStorage.removeItem('quizizz_answers');
+      localStorage.setItem('quizizz_sessionId', foundSessionId);
       setIsJoining(false);
     } catch (err) {
       setError('Error buscando la sesión.');
@@ -89,8 +129,29 @@ const JoinSession = () => {
     const unsubscribe = onValue(sessionRef, (snapshot) => {
       const data = snapshot.val();
       setSessionData(data);
-      // Solo pasar a quiz si la sesión está iniciada y la cuenta regresiva terminó
-      if (data && data.status === 'started' && (!remoteCountdown || remoteCountdown <= 0)) {
+      
+      // Si la sesión ya está iniciada y el participante está en lobby, iniciar cuenta regresiva simulada
+      if (data && data.status === 'started' && step === 'lobby' && !showSimulatedCountdown && simulatedCountdown === null) {
+        // Simular cuenta regresiva de 3 segundos para el participante que se une a media partida
+        setShowSimulatedCountdown(true);
+        setSimulatedCountdown(3);
+        // Reiniciar progreso para nueva sesión
+        setCurrentIndex(0);
+        setAnswers([]);
+        let counter = 3;
+        const interval = setInterval(() => {
+          counter--;
+          setSimulatedCountdown(counter);
+          if (counter === 0) {
+            clearInterval(interval);
+            setShowSimulatedCountdown(false);
+            setSimulatedCountdown(null);
+            setStep('quiz'); // Pasar directamente al quiz después de la cuenta regresiva
+          }
+        }, 1000);
+      }
+      // Solo pasar a quiz si la sesión está iniciada y la cuenta regresiva terminó (para casos normales)
+      else if (data && data.status === 'started' && (!remoteCountdown || remoteCountdown <= 0) && !showSimulatedCountdown) {
         if (step === 'lobby') setStep('quiz');
       }
       if (!data) {
@@ -153,32 +214,41 @@ const JoinSession = () => {
       tipo = 'casual';
       code = '';
     }
-    setParticipant({ name: nombre, type: tipo, personnelCode: code });
+    const participanteObj = { name: nombre, type: tipo, personnelCode: code };
+    setParticipant(participanteObj);
+    localStorage.setItem('quizizz_participant', JSON.stringify(participanteObj));
     // Registrar en RTDB
-    await push(ref(rtdb, `liveSessions/${sessionId}/participants`), {
-      name: nombre,
-      type: tipo,
-      personnelCode: code,
-    });
+    await push(ref(rtdb, `liveSessions/${sessionId}/participants`), participanteObj);
     setStep('lobby');
     setIsJoining(false);
   };
 
-  // Cargar preguntas cuando la sesión inicie
+  // Cargar preguntas cuando la sesión inicie o se esté en la pantalla final
   useEffect(() => {
     const cargarPreguntas = async () => {
-      if (step === 'quiz' && sessionData?.quizId) {
+      if ((step === 'quiz' || step === 'finished') && sessionData?.quizId) {
+        console.log('[Debug] Cargando preguntas para el quiz ID:', sessionData.quizId);
         const quizDocRef = doc(db, 'quizzes', sessionData.quizId);
         const quizDocSnap = await getDoc(quizDocRef);
         if (quizDocSnap.exists() && quizDocSnap.data().questions) {
-          setQuizQuestions(quizDocSnap.data().questions);
-          setCurrentIndex(0);
-          setAnswers([]);
+          const questions = quizDocSnap.data().questions;
+          console.log('[Debug] Preguntas cargadas de Firestore:', questions);
+          setQuizQuestions(questions);
+          // Siempre reiniciar el progreso al comenzar el quiz
+          if (step === 'quiz') {
+            setCurrentIndex(0);
+            setAnswers([]);
+            // Limpiar localStorage de sesiones anteriores
+            localStorage.removeItem('quizizz_currentIndex');
+            localStorage.removeItem('quizizz_answers');
+          }
+        } else {
+          console.error('[Debug] No se encontró el documento del quiz o no tiene preguntas.');
         }
       }
     };
     cargarPreguntas();
-  }, [step, sessionData]);
+  }, [step, sessionData?.quizId]); // Depender del quizId para re-ejecutar si cambia
 
   // Resetear feedback al cambiar de pregunta
   useEffect(() => {
@@ -186,10 +256,17 @@ const JoinSession = () => {
     setShowFeedback(false);
     if (quizQuestions.length > 0 && currentIndex < quizQuestions.length) {
       const q = quizQuestions[currentIndex];
-      setCorrectIndex(typeof q.correct === 'number' ? q.correct : (q.correct ? q.correct : 0));
+      setCorrectIndex(typeof q.correctAnswer === 'number' ? q.correctAnswer : 0);
       setQuestionStart(Date.now()); // Reiniciar tiempo de inicio aquí
     }
-  }, [currentIndex, quizQuestions]);
+    // Solo persistir avance si estamos en el quiz y hay progreso real
+    if (step === 'quiz' && currentIndex > 0) {
+      localStorage.setItem('quizizz_currentIndex', currentIndex);
+    }
+    if (step === 'quiz' && answers.length > 0) {
+      localStorage.setItem('quizizz_answers', JSON.stringify(answers));
+    }
+  }, [currentIndex, quizQuestions, answers, step]);
 
   // Paso 1: Ingresar código de acceso
   if (step === 'joincode') {
@@ -265,10 +342,20 @@ const JoinSession = () => {
           <h2 className="text-3xl font-extrabold text-purple-200 mb-4 text-center">¡Bienvenido, {participant.name}!</h2>
           <div className="w-full flex flex-col items-center mb-6">
             <p className="text-lg text-purple-100 mb-2">
-              {puedeEmpezar ? '¡El anfitrión ha iniciado la evaluación! Espera un momento...' : 'Esperando a que el anfitrión empiece...'}
+              {puedeEmpezar ? '¡El anfitrión ha iniciado la evaluación! Prepárate...' : 'Esperando a que el anfitrión empiece...'}
             </p>
             <div className="flex flex-row gap-2 mt-2">
               <span className="bg-purple-700 px-4 py-2 rounded-full text-lg font-bold tracking-widest text-white shadow">{sessionData?.joinCode}</span>
+            </div>
+          </div>
+          {/* Lista de participantes en el lobby */}
+          <div className="w-full mt-4">
+            <h3 className="text-md text-purple-300 mb-2 text-center">Participantes en la sala:</h3>
+            <div className="flex flex-wrap justify-center gap-2">
+              {participants.length === 0 && <span className="text-gray-400">Nadie se ha unido aún</span>}
+              {participants.map((p, i) => (
+                <span key={i} className="bg-purple-700 px-4 py-1 rounded-full text-base text-white shadow">{p.name || `Participante ${i + 1}`}</span>
+              ))}
             </div>
           </div>
         </div>
@@ -280,51 +367,118 @@ const JoinSession = () => {
             </div>
           </div>
         )}
+        {showSimulatedCountdown && simulatedCountdown !== null && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50 animate-fadeIn">
+            <div className="flex flex-col items-center">
+              <span className="text-6xl font-extrabold text-white animate-pulse mb-4">¡A la cuenta de!</span>
+              <span className="text-[8rem] font-extrabold text-purple-400 animate-bounce">{simulatedCountdown}</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   // Paso 4: Quiz a ritmo del estudiante
   if (step === 'quiz' && quizQuestions.length > 0 && currentIndex < quizQuestions.length) {
+    const q = quizQuestions[currentIndex];
     const handleAnswer = (i) => {
       if (selected !== null) return;
       setSelected(i);
       setShowFeedback(true);
       // Calcular tiempo de respuesta
       const answerTime = (Date.now() - questionStart) / 1000;
+      // Calcular puntaje
+      let puntos = 0;
+      const tiempoLimite = 30;
+      if (i === correctIndex) {
+        if (answerTime <= tiempoLimite) {
+          puntos = Math.round(600 + ((tiempoLimite - answerTime) / tiempoLimite) * 600);
+        } else {
+          puntos = 600;
+        }
+        confetti({
+          particleCount: 120,
+          spread: 90,
+          origin: { y: 0.7 }
+        });
+      }
+      setScore(puntos);
+      setShowScore(true);
       setTimeout(() => {
         setShowFeedback(false);
         setSelected(null);
+        setShowScore(false);
         if (currentIndex + 1 === quizQuestions.length) {
           setStep('finished');
         } else {
           setCurrentIndex(currentIndex + 1);
         }
-      }, 2000);
+      }, 3000);
       const newAnswers = [...answers];
-      newAnswers[currentIndex] = { answer: i, time: answerTime };
+      newAnswers[currentIndex] = {
+        answer: i,
+        time: answerTime,
+        score: puntos,
+        correct: i === correctIndex,
+        question: q.question || '', // Corregido para usar la propiedad correcta
+      };
       setAnswers(newAnswers);
       // Guardar en Firebase
       if (sessionId && participant.name) {
         const answersRef = ref(rtdb, `liveSessions/${sessionId}/answers/${participant.name}`);
-        // Guardar el array completo de respuestas del participante
-        // (esto permite que el admin vea el avance en tiempo real)
         import('firebase/database').then(({ set }) => {
           set(answersRef, newAnswers);
         });
       }
     };
+
+    // Calcular ranking local en tiempo real (por avance y puntaje)
+    const ranking = participants.map(p => {
+      const userAnswers = Array.isArray(p.name === participant.name ? answers : (answers[p.name] || [])) ? (p.name === participant.name ? answers : (answers[p.name] || [])) : [];
+      const answeredCount = userAnswers.filter(a => a && typeof a.answer !== 'undefined').length;
+      const score = userAnswers.reduce((acc, a) => acc + (a && a.score ? a.score : 0), 0);
+      return {
+        name: p.name,
+        answeredCount,
+        score,
+      };
+    }).sort((a, b) => b.answeredCount - a.answeredCount || b.score - a.score);
+    const myRank = ranking.findIndex(r => r.name === participant.name) + 1;
+
+    const formatOrdinal = (n) => {
+      if (n <= 0) return n;
+      const s = ['to', 'ro', 'do', 'ro', 'to', 'to', 'to', 'mo', 'vo', 'no'];
+      const last = n % 10;
+      const lastTwo = n % 100;
+      if (lastTwo >= 11 && lastTwo <= 13) {
+        return `${n}vo.`;
+      }
+      return `${n}${s[last]}.`;
+    };
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
+        {/* Ranking en tiempo real en la esquina superior izquierda */}
+        <div className="fixed top-4 left-4 bg-black bg-opacity-50 rounded-full px-4 py-2 shadow-lg z-20">
+          <span className="text-lg font-bold text-white">
+            Posición: <span className="text-green-300">{formatOrdinal(myRank)}</span>
+          </span>
+        </div>
         <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-2xl flex flex-col items-center backdrop-blur-md border border-purple-400 animate-fadeIn">
           <h2 className="text-2xl font-bold text-purple-200 mb-4 text-center animate-bounce">Pregunta {currentIndex + 1} de {quizQuestions.length}</h2>
           <div className="w-full mb-6">
             <div className="bg-purple-800 rounded-xl p-6 text-xl text-white text-center mb-4 min-h-[80px] flex items-center justify-center animate-fadeInDown">
-              {q.text || q.pregunta || 'Pregunta'}
+              {q.question || 'Pregunta'}
             </div>
           </div>
           <div className="mt-6 w-full flex flex-col gap-4">
-            {q.options.map((opt, i) => {
+            {showScore && (
+              <div className="text-3xl font-extrabold text-green-300 text-center animate-bounce mb-2">
+                +{score} puntos
+              </div>
+            )}
+            {q.options && q.options.length > 0 ? q.options.map((opt, i) => {
               let btnClass = 'w-full py-3 rounded-xl text-lg font-semibold shadow transition-all border-2 border-purple-400 bg-black bg-opacity-40 animate-fadeInUp';
               if (showFeedback && selected !== null) {
                 if (i === correctIndex) btnClass += ' bg-green-600 text-white';
@@ -345,7 +499,7 @@ const JoinSession = () => {
                   {opt}
                 </button>
               );
-            })}
+            }) : <div className="text-red-300 text-center">No hay opciones configuradas para esta pregunta.</div>}
           </div>
         </div>
       </div>
@@ -357,13 +511,13 @@ const JoinSession = () => {
     // Página de estadísticas totales
     // Calcular estadísticas del participante
     const total = quizQuestions.length;
-    const correct = answers.filter(a => a && typeof a.answer !== 'undefined' && quizQuestions[answers.indexOf(a)]?.correct === a.answer).length;
-    const incorrect = answers.filter(a => a && typeof a.answer !== 'undefined' && quizQuestions[answers.indexOf(a)]?.correct !== a.answer).length;
+    const correct = answers.filter(a => a?.correct).length;
+    const incorrect = answers.filter(a => a && a.correct === false).length;
     const precision = total > 0 ? ((correct / total) * 100).toFixed(1) : '0.0';
     const totalTime = answers.reduce((acc, a) => acc + (a && a.time ? a.time : 0), 0).toFixed(1);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
-        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-lg flex flex-col items-center backdrop-blur-md border border-purple-400">
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-2xl flex flex-col items-center backdrop-blur-md border border-purple-400">
           <h2 className="text-3xl font-extrabold text-purple-200 mb-4 text-center">¡Examen finalizado!</h2>
           <p className="text-lg text-purple-100 mb-6">Gracias por participar, {participant.name}.</p>
           <div className="w-full flex flex-col items-center gap-2 mt-4">
@@ -387,6 +541,34 @@ const JoinSession = () => {
               </div>
             </div>
           </div>
+
+          {/* Resumen de Preguntas */}
+          <div className="w-full mt-8">
+            <h3 className="text-xl font-bold text-purple-300 mb-4 text-center">Resumen de tus respuestas</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+              {quizQuestions.map((q, index) => {
+                const userAnswer = answers[index];
+                const isCorrect = userAnswer?.correct;
+                const questionText = q.question || 'Pregunta sin texto';
+                
+                return (
+                  <div key={index} className={`flex items-center justify-between p-3 rounded-lg text-left ${isCorrect ? 'bg-green-900/50' : 'bg-red-900/50'}`}>
+                    <span className="text-white flex-1 mr-4">{index + 1}. {questionText}</span>
+                    {userAnswer !== undefined ? (
+                      isCorrect ? (
+                        <span className="text-green-300 font-bold flex-shrink-0">Correcta</span>
+                      ) : (
+                        <span className="text-red-300 font-bold flex-shrink-0">Incorrecta</span>
+                      )
+                    ) : (
+                      <span className="text-gray-400 font-bold flex-shrink-0">Sin responder</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
       </div>
     );

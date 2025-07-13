@@ -5,7 +5,8 @@ import { ref, onValue, set, update } from 'firebase/database'; // Importar updat
 import { rtdb, db } from '../firebase/config'; // Asegúrate de exportar tu RTDB y db (Firestore) en config.js
 import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
 import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
-
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
 
 const LiveSession = () => {
   const { quizId, sessionId } = useParams();
@@ -24,6 +25,7 @@ const LiveSession = () => {
   const [countdown, setCountdown] = useState(null);
   const [showCountdown, setShowCountdown] = useState(false);
   const [remoteCountdown, setRemoteCountdown] = useState(null);
+  const [user, loading] = useAuthState(auth);
 
   const joinLink = `${window.location.origin}/join/${sessionId}`;
 
@@ -137,6 +139,28 @@ const LiveSession = () => {
     }, { onlyOnce: true });
     setShowDeleteModal(false);
     setParticipantToDelete(null);
+  }
+
+  // Redirección automática del admin a la página de estadísticas en tiempo real
+  useEffect(() => {
+    // Solo redirigir si la sesión ha comenzado, el countdown terminó y el usuario está autenticado
+    if (!loading && user && sessionStatus === 'started' && (!remoteCountdown || remoteCountdown <= 0)) {
+      navigate(`/admin/session/${quizId}/${sessionId}/stats`, { replace: true });
+    }
+  }, [sessionStatus, remoteCountdown, quizId, sessionId, navigate, user, loading]);
+
+  // Mostrar pantalla de carga si el estado de autenticación está cargando
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-purple-800 to-black text-white">
+        <span className="text-3xl font-bold animate-pulse">Cargando...</span>
+      </div>
+    );
+  }
+
+  // Si no hay usuario autenticado, no renderizar nada (o redirigir al login si lo prefieres)
+  if (!user) {
+    return null;
   }
 
   return (

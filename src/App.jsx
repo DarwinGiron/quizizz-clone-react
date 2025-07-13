@@ -4,6 +4,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 
 import { auth } from './firebase/config';
 import MainLayout from './layouts/MainLayout';
+import confetti from './utils/confetti';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -38,6 +39,23 @@ function PrivateRoute({ children }) {
 }
 
 function App() {
+  // Montar el canvas de confetti global
+  React.useEffect(() => {
+    if (!document.getElementById('confetti-canvas')) {
+      const canvas = document.createElement('canvas');
+      canvas.id = 'confetti-canvas';
+      canvas.style.position = 'fixed';
+      canvas.style.top = 0;
+      canvas.style.left = 0;
+      canvas.style.width = '100vw';
+      canvas.style.height = '100vh';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = 9999;
+      document.body.appendChild(canvas);
+      confetti.create(canvas, { resize: true, useWorker: true });
+    }
+  }, []);
+
   const [user] = useAuthState(auth);
 
   return (
@@ -73,8 +91,8 @@ function App() {
         <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
         <Route path="/join" element={<JoinSession />} />
         <Route path="/join/:sessionId" element={<JoinSession />} />
-        {/* Página de estadísticas en vivo para el admin */}
-        <Route path="/admin/session/:sessionId/stats" element={<PrivateRoute><SessionStatsAdmin /></PrivateRoute>} />
+        {/* Página de estadísticas en vivo para el admin (ahora pública) */}
+        <Route path="/admin/session/:quizId/:sessionId/stats" element={<SessionStatsAdmin />} />
         <Route path="/estadisticas-totales/:sessionId" element={<PrivateRoute><EstadisticasTotales /></PrivateRoute>} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" />} />

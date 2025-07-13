@@ -14,6 +14,7 @@ import {
 import { useParams } from "react-router-dom";
 import { Trash2, Pencil } from "lucide-react";
 import ImportarCuadrillaModal from "../components/ImportarCuadrillaModal";
+import BackButton from "../components/BackButton";
 
 export default function GestionarCuadrilla() {
   const { supervisorId } = useParams();
@@ -62,6 +63,7 @@ export default function GestionarCuadrilla() {
 
   return (
     <div className="p-6">
+      <BackButton to="/usuarios" label="Volver a Usuarios" className="mb-6" />
       {supervisor && (
         <>
           <h1 className="text-2xl font-bold text-purple-600 mb-1">

@@ -8,6 +8,7 @@ import { auth, db } from '../firebase/config';
 import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import Sidebar from '../components/Sidebar';
+import BackButton from '../components/BackButton';
 import 'react-calendar/dist/Calendar.css';
 
 export default function AsignacionAvanzada() {
@@ -139,6 +140,7 @@ export default function AsignacionAvanzada() {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 bg-white p-6 ml-60 min-h-screen">
+        <BackButton to="/asignaciones" label="Volver a Asignaciones" className="mb-4" />
         <h1 className="text-3xl font-bold mb-2 text-gray-800">Asignación avanzada de participantes</h1>
         {capacitacion && (
           <p className="text-sm text-gray-600 mb-4">

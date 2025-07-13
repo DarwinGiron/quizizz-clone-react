@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import BackButton from '../components/BackButton';
 
 const PreviewQuiz = () => {
   const { id } = useParams();
@@ -33,6 +34,7 @@ const PreviewQuiz = () => {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
+      <BackButton to="/myquizzes" label="Volver a Mis Quizzes" className="mb-6" />
       <h1 className="text-3xl font-bold mb-4 text-center">{quiz.title}</h1>
       {quiz.questions.map((question, index) => (
         <div key={index} className="mb-6 p-4 border border-gray-300 rounded shadow-sm">

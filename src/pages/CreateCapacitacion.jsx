@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { format, addMinutes, isBefore, parse } from 'date-fns';
+import BackButton from '../components/BackButton';
 
 const CreateCapacitacion = () => {
   const [form, setForm] = useState({
@@ -103,6 +104,7 @@ const CreateCapacitacion = () => {
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
+      <BackButton to="/capacitaciones" label="Volver a Capacitaciones" className="mb-4" />
       <h2 className="text-2xl font-bold mb-4">Nueva Capacitación</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input

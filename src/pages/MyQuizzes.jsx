@@ -1,30 +1,96 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiMoreVertical, FiEye } from 'react-icons/fi';
+import { FiMoreVertical, FiEye, FiUsers, FiTrendingUp, FiCalendar } from 'react-icons/fi';
 
 const MyQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
+  const [quizStats, setQuizStats] = useState({});
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchQuizzes = async () => {
+    const fetchQuizzesAndStats = async () => {
       try {
+        setLoading(true);
+        
+        // Obtener todos los quizzes
         const querySnapshot = await getDocs(collection(db, 'quizzes'));
-        const fetched = [];
+        const fetchedQuizzes = [];
         querySnapshot.forEach((doc) => {
-          fetched.push({ id: doc.id, ...doc.data() });
+          fetchedQuizzes.push({ id: doc.id, ...doc.data() });
         });
-        setQuizzes(fetched);
+        setQuizzes(fetchedQuizzes);
+
+        // Obtener estadísticas de sesiones para cada quiz
+        const statsPromises = fetchedQuizzes.map(async (quiz) => {
+          try {
+            const sessionsQuery = query(
+              collection(db, 'sessionStats'),
+              where('quizId', '==', quiz.id)
+            );
+            const sessionsSnapshot = await getDocs(sessionsQuery);
+            
+            let totalParticipants = 0;
+            let totalSessions = sessionsSnapshot.size;
+            let lastSessionDate = null;
+            let totalPrecision = 0;
+            let sessionsWithPrecision = 0;
+
+            sessionsSnapshot.forEach((doc) => {
+              const sessionData = doc.data();
+              if (sessionData.participants) {
+                totalParticipants += sessionData.participants.length;
+              }
+              if (sessionData.createdAt) {
+                const sessionDate = sessionData.createdAt.toDate();
+                if (!lastSessionDate || sessionDate > lastSessionDate) {
+                  lastSessionDate = sessionDate;
+                }
+              }
+              if (sessionData.precision !== undefined) {
+                totalPrecision += sessionData.precision;
+                sessionsWithPrecision++;
+              }
+            });
+
+            return {
+              quizId: quiz.id,
+              totalSessions,
+              totalParticipants,
+              lastSessionDate,
+              averagePrecision: sessionsWithPrecision > 0 ? Math.round(totalPrecision / sessionsWithPrecision) : 0
+            };
+          } catch (error) {
+            console.error(`Error obteniendo stats para quiz ${quiz.id}:`, error);
+            return {
+              quizId: quiz.id,
+              totalSessions: 0,
+              totalParticipants: 0,
+              lastSessionDate: null,
+              averagePrecision: 0
+            };
+          }
+        });
+
+        const stats = await Promise.all(statsPromises);
+        const statsMap = {};
+        stats.forEach(stat => {
+          statsMap[stat.quizId] = stat;
+        });
+        setQuizStats(statsMap);
+
       } catch (err) {
-        console.error('Error al obtener quizzes', err);
+        console.error('Error al obtener quizzes y estadísticas:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchQuizzes();
+    fetchQuizzesAndStats();
   }, []);
 
   // Cierra el dropdown si haces clic fuera
@@ -94,62 +160,164 @@ const MyQuizzes = () => {
 
         <h1 className="text-2xl font-bold mb-6 text-center">Mis Quizzes</h1>
 
-        {quizzes.length === 0 ? (
-          <p className="text-center">No tienes quizzes aún.</p>
+        {loading ? (
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 gap-6 w-full max-w-5xl">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-lg shadow-md px-6 py-4 animate-pulse">
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="flex gap-4">
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-28"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : quizzes.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="mb-4 text-6xl">📝</div>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">No tienes quizzes aún</h3>
+            <p className="text-gray-500 mb-6">Crea tu primer quiz para comenzar a capacitar a tu equipo</p>
+            <button
+              onClick={() => navigate('/create')}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Crear primer quiz
+            </button>
+          </div>
         ) : (
           <div className="flex justify-center">
             <div className="grid grid-cols-1 gap-6 w-full max-w-5xl">
               {quizzes
                 .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                 .map((quiz, index) => {
-                  const partidasJugadas = Math.floor(Math.random() * 40) + 1;
-                  const personalAsistio = partidasJugadas * (Math.floor(Math.random() * 5) + 1);
+                  const stats = quizStats[quiz.id] || {
+                    totalSessions: 0,
+                    totalParticipants: 0,
+                    lastSessionDate: null,
+                    averagePrecision: 0
+                  };
+
+                  const formatDate = (date) => {
+                    if (!date) return 'Nunca';
+                    return date.toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    });
+                  };
 
                   return (
-                    <div>
-                      <Link
-                        key={quiz.id}
-                        to={`/quiz/${quiz.id}`}
-                        className="block bg-white rounded-lg shadow-md px-6 py-4 transition-transform transform hover:-translate-y-1 hover:shadow-xl w-full"
+                    <div key={quiz.id}>
+                      <div 
+                        onClick={() => navigate(`/quiz/${quiz.id}?tab=sessions`)}
+                        className="group bg-white rounded-xl shadow-md hover:shadow-xl px-6 py-5 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-100"
                       >
-                        <div className="flex justify-between items-center">
-                          <h2
-                            onClick={(e) => {
-                              e.preventDefault();
-                              navigate(`/quiz/${quiz.id}`);
-                            }}
-                            className="text-lg font-bold text-black cursor-pointer hover:underline"
-                          >
-                            {quiz.title}
-                          </h2>
+                        {/* Header */}
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <h2 className="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors mb-2 line-clamp-2">
+                              {quiz.title}
+                            </h2>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <FiCalendar size={14} />
+                              <span>Última sesión: {formatDate(stats.lastSessionDate)}</span>
+                            </div>
+                          </div>
 
-                          <div className="flex items-center gap-4 relative">
-                            <Link
-                              to={`/preview/${quiz.id}`}
+                          <div className="flex items-center gap-3 ml-4">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/preview/${quiz.id}`);
+                              }}
                               title="Vista previa"
-                              className="text-purple-600 hover:text-purple-800"
-                              onClick={e => e.stopPropagation()}
+                              className="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
                             >
-                              <FiEye size={20} />
-                            </Link>
+                              <FiEye size={18} />
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 toggleDropdown(e, index);
                               }}
-                              className="text-gray-700 hover:text-black dropdown-toggle"
+                              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors dropdown-toggle"
                             >
-                              <FiMoreVertical size={24} />
+                              <FiMoreVertical size={18} />
                             </button>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-2 flex flex-wrap items-center gap-x-4">
-                          📋 {quiz.questions?.length || 0} preguntas
-                          🎮 {partidasJugadas} partidas jugadas
-                          👥 {personalAsistio} personas capacitadas
-                        </p>
-                      </Link>
+
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <span className="text-blue-600 font-semibold text-sm">📋</span>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-medium">Preguntas</p>
+                              <p className="text-lg font-bold text-gray-800">{quiz.questions?.length || 0}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <FiTrendingUp className="text-green-600" size={16} />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-medium">Sesiones</p>
+                              <p className="text-lg font-bold text-gray-800">{stats.totalSessions}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                              <FiUsers className="text-purple-600" size={16} />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-medium">Participantes</p>
+                              <p className="text-lg font-bold text-gray-800">{stats.totalParticipants}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <span className="text-orange-600 font-semibold text-sm">📊</span>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-medium">Precisión</p>
+                              <p className="text-lg font-bold text-gray-800">
+                                {stats.averagePrecision > 0 ? `${stats.averagePrecision}%` : 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status Badge */}
+                        {stats.totalSessions > 0 && (
+                          <div className="mt-4 flex justify-between items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              ✅ Quiz activo con datos
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              Clic para ver estadísticas detalladas
+                            </span>
+                          </div>
+                        )}
+                        {stats.totalSessions === 0 && (
+                          <div className="mt-4 flex justify-between items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                              📋 Sin sesiones aún
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              Crear sesión en vivo para comenzar
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

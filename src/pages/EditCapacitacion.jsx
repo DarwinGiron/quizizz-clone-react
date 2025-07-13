@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import BackButton from '../components/BackButton';
 
 const EditCapacitacion = () => {
   const { id } = useParams();
@@ -75,6 +76,7 @@ const EditCapacitacion = () => {
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
+      <BackButton to="/capacitaciones" label="Volver a Capacitaciones" className="mb-4" />
       <h2 className="text-2xl font-bold mb-4">Editar Capacitación</h2>
       <form onSubmit={handleUpdate} className="space-y-4">
         <input

@@ -10,6 +10,7 @@ import {
   FaEye,
   FaEdit,
 } from 'react-icons/fa';
+import BackButton from '../components/BackButton';
 
 const colors = ['bg-red-500', 'bg-blue-500', 'bg-yellow-500', 'bg-green-500'];
 
@@ -68,6 +69,7 @@ const QuizEdit = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      <BackButton to="/myquizzes" label="Volver a Mis Quizzes" className="mb-4" />
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Editando: {quiz.title}</h2>
 
       {quiz.questions.map((q, qIdx) => (
