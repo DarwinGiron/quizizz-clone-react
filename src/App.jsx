@@ -28,6 +28,7 @@ import UsuariosAdmin from './pages/UsuariosAdmin';
 import GestionarCuadrilla from './pages/GestionarCuadrilla';
 import HorariosPorCapacitacion from './pages/HorariosPorCapacitacion';
 import AsignacionAvanzada from './pages/AsignacionAvanzada';
+import AsignacionIntuitiva from './pages/AsignacionIntuitiva';
 import JoinSession from './pages/JoinSession';
 import SessionStatsAdmin from './pages/SessionStatsAdmin';
 import EstadisticasTotales from './pages/EstadisticasTotales';
@@ -89,6 +90,7 @@ function App() {
         <Route path="/evaluacion/nueva" element={<PrivateRoute><MainLayout><SeleccionTipoEvaluacion /></MainLayout></PrivateRoute>}/>
         <Route path="/asignaciones" element={<Asignaciones />} />
         <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
+        <Route path="/asignaciones/intuitiva/:capacitacionId" element={<AsignacionIntuitiva />} />
         <Route path="/join" element={<JoinSession />} />
         <Route path="/join/:sessionId" element={<JoinSession />} />
         {/* Página de estadísticas en vivo para el admin (ahora pública) */}

@@ -207,11 +207,7 @@ export default function AsignacionAvanzada() {
           <div>
             <h2 className="text-sm font-semibold mb-1 text-gray-700">📅 Días habilitados</h2>
             <Calendar
-              onChange={(date) => {
-                const formattedDate = formatLocalDate(date);
-                console.log('Fecha seleccionada:', date, 'Formateada:', formattedDate);
-                setDiaSeleccionado(formattedDate);
-              }}
+              onChange={(date) => setDiaSeleccionado(formatLocalDate(date))}
               value={createLocalDate(diaSeleccionado)}
               tileDisabled={({ date, view }) =>
                 view === 'month' &&

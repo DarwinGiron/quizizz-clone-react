@@ -178,9 +178,32 @@ export default function Asignaciones() {
         {/* Header mejorado */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Asignar Horarios</h1>
-          <p className="text-gray-600">Gestiona y asigna personal a las capacitaciones disponibles</p>
+          <p className="text-gray-600 mb-4">Gestiona y asigna personal a las capacitaciones disponibles</p>
+          
+          {/* Características destacadas */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 mb-4 border border-purple-200">
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">✨</span>
+              <h3 className="text-sm font-semibold text-purple-900">¡Nueva experiencia de asignación!</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-purple-800">
+              <div className="flex items-center">
+                <span className="mr-2">🖱️</span>
+                <span>Arrastra y suelta personal</span>
+              </div>
+              <div className="flex items-center">
+                <span className="mr-2">📅</span>
+                <span>Vista semanal completa</span>
+              </div>
+              <div className="flex items-center">
+                <span className="mr-2">⚡</span>
+                <span>Asignación en tiempo real</span>
+              </div>
+            </div>
+          </div>
+          
           {capacitaciones.length > 0 && (
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="text-sm text-gray-500">
               {capacitaciones.length} capacitación{capacitaciones.length !== 1 ? 'es' : ''} disponible{capacitaciones.length !== 1 ? 's' : ''}
             </div>
           )}
@@ -259,17 +282,38 @@ export default function Asignaciones() {
                   </div>
                 </div>
 
-                {/* Footer con botón de acción */}
+                {/* Footer con botones de acción */}
                 <div className="px-6 pb-6">
-                  <Link
-                    to={`/asignaciones/avanzada/${cap.id}`}
-                    className="w-full inline-flex items-center justify-center bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium shadow-sm"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                    Asignar Personal
-                  </Link>
+                  <div className="space-y-2">
+                    {/* Botón principal - Nueva interfaz intuitiva */}
+                    <Link
+                      to={`/asignaciones/intuitiva/${cap.id}`}
+                      className="w-full inline-flex items-center justify-center bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 text-sm font-medium shadow-sm"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                      ✨ Asignación Intuitiva (Recomendado)
+                    </Link>
+                    
+                    {/* Botón secundario - Interfaz clásica */}
+                    <Link
+                      to={`/asignaciones/avanzada/${cap.id}`}
+                      className="w-full inline-flex items-center justify-center bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 text-sm font-medium border border-gray-300"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                      Modo Avanzado
+                    </Link>
+                  </div>
+                  
+                  {/* Etiqueta "Nuevo" */}
+                  <div className="flex justify-center mt-2">
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                      🎉 ¡Nueva interfaz más fácil!
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
