@@ -6,32 +6,48 @@ import { auth } from './firebase/config';
 import MainLayout from './layouts/MainLayout';
 import confetti from './utils/confetti';
 
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import CreateQuiz from './pages/CreateQuiz';
-import MyQuizzes from './pages/MyQuizzes';
-import QuizDetail from './pages/QuizDetail';
-import PreviewQuiz from './pages/PreviewQuiz';
-import EditQuiz from './pages/EditQuiz';
-import LiveSession from './pages/LiveSession';
-import SessionsPage from './pages/SessionsPage';
-import SessionReport from './pages/SessionReport';
-import SessionStats from './components/SessionStats';
-import EditCapacitacion from './pages/EditCapacitacion';
-import CapacitacionDetail from './pages/CapacitacionDetail';
-import SeleccionTipoEvaluacion from './components/SeleccionTipoEvaluacion';
-import Asignaciones from './pages/Asignaciones';
-import CapacitacionesDashboard from './pages/CapacitacionesDashboard';
-import CreateCapacitacion from './pages/CreateCapacitacion';
-import UsuariosAdmin from './pages/UsuariosAdmin';
-import GestionarCuadrilla from './pages/GestionarCuadrilla';
-import HorariosPorCapacitacion from './pages/HorariosPorCapacitacion';
-import AsignacionAvanzada from './pages/AsignacionAvanzada';
-import AsignacionIntuitiva from './pages/AsignacionIntuitiva';
-import JoinSession from './pages/JoinSession';
-import SessionStatsAdmin from './pages/SessionStatsAdmin';
-import EstadisticasTotales from './pages/EstadisticasTotales';
+// Importaciones desde los módulos organizados
+import {
+  // Autenticación
+  Login,
+  Register,
+  
+  // Dashboard
+  Dashboard,
+  
+  // Evaluaciones
+  CreateQuiz,
+  MyQuizzes,
+  QuizDetail,
+  PreviewQuiz,
+  EditQuiz,
+  LiveSession,
+  JoinSession,
+  SeleccionTipoEvaluacion,
+  
+  // Estadísticas
+  SessionsPage,
+  SessionReport,
+  SessionStats,
+  SessionStatsAdmin,
+  EstadisticasTotales,
+  
+  // Capacitaciones
+  EditCapacitacion,
+  CapacitacionDetail,
+  CapacitacionesDashboard,
+  CreateCapacitacion,
+  HorariosPorCapacitacion,
+  
+  // Asignaciones
+  Asignaciones,
+  AsignacionAvanzada,
+  AsignacionIntuitiva,
+  
+  // Usuarios
+  UsuariosAdmin,
+  GestionarCuadrilla,
+} from './modules';
 
 function PrivateRoute({ children }) {
   const [user, loading] = useAuthState(auth);
