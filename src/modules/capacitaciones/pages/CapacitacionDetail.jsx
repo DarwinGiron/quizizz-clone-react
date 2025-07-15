@@ -367,11 +367,15 @@ const CapacitacionDetail = () => {
     const totalCupos = bloques.reduce((total, bloque) => total + (bloque.cupo_disponible || 0), 0);
     const ocupacion = totalCupos > 0 ? (totalParticipantes / totalCupos) * 100 : 0;
     
+    // Calcular cupo promedio por bloque desde los bloques reales
+    const cupoPorBloque = totalBloques > 0 ? Math.round(totalCupos / totalBloques) : (capacitacion.cupoBloque || capacitacion.cupo_bloque || 25);
+    
     return {
       totalBloques,
       bloquesDisponibles,
       totalParticipantes,
       totalCupos,
+      cupoPorBloque,
       ocupacion: Math.round(ocupacion)
     };
   };
@@ -476,7 +480,7 @@ const CapacitacionDetail = () => {
                       <span className="text-orange-600">👥</span>
                       <span className="text-sm font-medium text-orange-800">Cupo por bloque</span>
                     </div>
-                    <p className="text-orange-900 font-semibold">{capacitacion.cupoBloque || 25} personas</p>
+                    <p className="text-orange-900 font-semibold">{estadisticas.cupoPorBloque} personas</p>
                   </div>
                   
                   <div className="bg-purple-50 rounded-lg p-4">

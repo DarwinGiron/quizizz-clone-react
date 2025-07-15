@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { BackButton } from '../../../shared';
 
@@ -35,12 +35,39 @@ const EditCapacitacion = () => {
     setLoading(true);
 
     try {
+      console.log('🔍 Datos del formulario antes de actualizar:', form);
+      console.log('🔍 Cupo que se va a actualizar:', form.cupo_bloque, typeof form.cupo_bloque);
+      
+      // Actualizar la capacitación principal
       const ref = doc(db, 'capacitaciones', id);
       await updateDoc(ref, form);
-      alert('✅ Capacitación actualizada correctamente');
+
+      // Actualizar todos los bloques existentes con el nuevo cupo
+      const bloquesRef = collection(db, 'capacitacion_bloques');
+      const q = query(bloquesRef, where('capacitacion_id', '==', id));
+      const bloquesSnapshot = await getDocs(q);
+      
+      if (!bloquesSnapshot.empty) {
+        const batch = writeBatch(db);
+        const nuevoCupo = Number(form.cupo_bloque);
+        
+        console.log('🔍 Actualizando bloques con cupo:', nuevoCupo);
+        
+        bloquesSnapshot.docs.forEach((bloqueDoc) => {
+          console.log('🔍 Bloque antes:', bloqueDoc.data());
+          batch.update(bloqueDoc.ref, {
+            cupo_disponible: nuevoCupo
+          });
+        });
+        
+        await batch.commit();
+        console.log(`✅ Actualizados ${bloquesSnapshot.size} bloques con nuevo cupo: ${nuevoCupo}`);
+      }
+
+      alert('✅ Capacitación y bloques actualizados correctamente');
       navigate('/capacitaciones');
     } catch (error) {
-      console.error(error);
+      console.error('❌ Error al actualizar:', error);
       alert('❌ Error al actualizar');
     } finally {
       setLoading(false);

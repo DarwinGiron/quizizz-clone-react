@@ -30,6 +30,17 @@ export default function AsignacionIntuitiva() {
   const [draggedPerson, setDraggedPerson] = useState(null);
   const [areasDisponibles, setAreasDisponibles] = useState([]);
   const [maquinasDisponibles, setMaquinasDisponibles] = useState([]);
+  
+  // Estados para asignación por código
+  const [codigoPersonal, setCodigoPersonal] = useState('');
+  const [bloqueSeleccionado, setBloqueSeleccionado] = useState(null);
+  const [mostrarInputCodigo, setMostrarInputCodigo] = useState(false);
+  
+  // Estado para filtro de cuadrilla completa
+  const [mostrarCuadrillaCompleta, setMostrarCuadrillaCompleta] = useState(false);
+  
+  // Estado para forzar re-render
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Funciones auxiliares para fechas
   const createLocalDate = (dateString) => {
@@ -262,7 +273,21 @@ export default function AsignacionIntuitiva() {
       .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
   };
 
-  // Obtener personal disponible (filtrado)
+  // Obtener total de personal visible según el modo
+  const getTotalPersonalVisible = () => {
+    if (mostrarCuadrillaCompleta) {
+      // En modo cuadrilla completa, contar todo el personal de todos los supervisores
+      let total = 0;
+      supervisores.forEach(supervisor => {
+        const personalFiltrado = getPersonalPorSupervisor(supervisor.id);
+        total += personalFiltrado.length;
+      });
+      return total;
+    } else {
+      // En modo normal, usar la función existente
+      return getPersonalDisponible().length;
+    }
+  };
   const getPersonalDisponible = () => {
     let personal = [];
     
@@ -299,7 +324,33 @@ export default function AsignacionIntuitiva() {
     const cuadrillaCompleta = cuadrillas[supervisorId] || [];
     
     return cuadrillaCompleta.filter(persona => {
-      // Filtrar personal ya asignado - no mostrarlo en la lista de disponibles
+      // Si está en modo "cuadrilla completa", mostrar todo el personal
+      if (mostrarCuadrillaCompleta) {
+        // Aplicar solo filtros de área y máquina, no filtrar por asignación
+        if (filtroArea && !persona.area?.toLowerCase().includes(filtroArea.toLowerCase())) {
+          return false;
+        }
+        
+        if (filtroMaquina) {
+          const maquina = persona.maquina || persona.equipo || persona.tipo || '';
+          if (!maquina.toLowerCase().includes(filtroMaquina.toLowerCase())) {
+            return false;
+          }
+        }
+        
+        // En modo cuadrilla completa, aplicar filtro de disponibilidad normal
+        if (filtroDisponibilidad === 'disponibles' && estaAsignado(persona.id)) {
+          return false;
+        }
+        
+        if (filtroDisponibilidad === 'asignados' && !estaAsignado(persona.id)) {
+          return false;
+        }
+        
+        return true;
+      }
+      
+      // Modo normal: filtrar personal ya asignado - no mostrarlo en la lista de disponibles
       if (estaAsignado(persona.id)) {
         // Solo mostrar si específicamente se solicita ver los asignados
         if (filtroDisponibilidad !== 'asignados') {
@@ -395,7 +446,12 @@ export default function AsignacionIntuitiva() {
       });
 
       // Mostrar mensaje de éxito
-      console.log(`✅ ${draggedPerson.nombre} asignado al horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+      const codigoPersonal = draggedPerson.codigo || draggedPerson.codigoPersonal;
+      const identificador = codigoPersonal ? `${codigoPersonal} - ${draggedPerson.nombre}` : draggedPerson.nombre;
+      console.log(`✅ ${identificador} asignado al horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+      
+      // Forzar re-render
+      setForceUpdate(prev => prev + 1);
 
     } catch (error) {
       console.error('Error al asignar:', error);
@@ -403,6 +459,110 @@ export default function AsignacionIntuitiva() {
     }
 
     setDraggedPerson(null);
+  };
+
+  // Función para asignar personal por código
+  const handleAsignarPorCodigo = async (bloque) => {
+    if (!codigoPersonal.trim()) {
+      alert('Por favor, ingrese un código de personal válido');
+      return;
+    }
+
+    // Buscar la persona por código en todas las cuadrillas
+    let personaEncontrada = null;
+    Object.values(cuadrillas).forEach(cuadrilla => {
+      const persona = cuadrilla.find(p => 
+        p.codigo === codigoPersonal || 
+        p.codigoPersonal === codigoPersonal || 
+        p.cedula === codigoPersonal ||
+        p.id === codigoPersonal
+      );
+      if (persona) personaEncontrada = persona;
+    });
+
+    if (!personaEncontrada) {
+      alert('No se encontró ninguna persona con ese código');
+      return;
+    }
+
+    // Verificar si hay cupo disponible
+    const ocupados = bloque.participantes?.length || 0;
+    if (ocupados >= bloque.cupo_disponible) {
+      alert('Este horario ya está lleno');
+      return;
+    }
+
+    // Verificar si la persona ya está asignada a este bloque
+    if (bloque.participantes?.some(p => p.id === personaEncontrada.id)) {
+      alert('Esta persona ya está asignada a este horario');
+      return;
+    }
+
+    try {
+      // Actualizar en Firebase
+      const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
+      await updateDoc(bloqueRef, {
+        participantes: arrayUnion(personaEncontrada),
+      });
+
+      // Actualizar estado local
+      setBloques(prev => {
+        const nuevosBloque = prev.map(b => {
+          if (b.id === bloque.id) {
+            return {
+              ...b,
+              participantes: [...(b.participantes || []), personaEncontrada],
+            };
+          }
+          return b;
+        });
+        console.log('🔄 Bloques actualizados:', nuevosBloque.find(b => b.id === bloque.id)?.participantes?.length || 0);
+        return nuevosBloque;
+      });
+
+      // Actualizar cuadrillas - remover de la cuadrilla original
+      setCuadrillas(prev => {
+        const nuevasCuadrillas = { ...prev };
+        Object.keys(nuevasCuadrillas).forEach(supervisorId => {
+          const personalAntes = nuevasCuadrillas[supervisorId].length;
+          nuevasCuadrillas[supervisorId] = nuevasCuadrillas[supervisorId].filter(p => p.id !== personaEncontrada.id);
+          const personalDespues = nuevasCuadrillas[supervisorId].length;
+          
+          if (personalAntes !== personalDespues) {
+            console.log(`🔄 Cuadrilla ${supervisorId}: ${personalAntes} → ${personalDespues} personas`);
+          }
+        });
+        return nuevasCuadrillas;
+      });
+
+      // Limpiar campos
+      setCodigoPersonal('');
+      setBloqueSeleccionado(null);
+      setMostrarInputCodigo(false);
+
+      // Mostrar mensaje de éxito
+      const codigoPersonal = personaEncontrada.codigo || personaEncontrada.codigoPersonal;
+      const identificador = codigoPersonal ? `${codigoPersonal} - ${personaEncontrada.nombre}` : personaEncontrada.nombre;
+      console.log(`✅ ${identificador} asignado al horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+      
+      // Forzar re-render del componente
+      console.log('🔄 Forzando actualización del estado...');
+      
+      // Pequeño delay para asegurar que el estado se actualice
+      setTimeout(() => {
+        console.log('🔍 Verificando estado después de asignación:');
+        console.log('- Persona asignada:', estaAsignado(personaEncontrada.id));
+        console.log('- Bloques actualizados:', bloques.length);
+        
+        // Forzar re-render completo
+        setVistaActual(prev => prev); // Trigger re-render
+        setForceUpdate(prev => prev + 1); // Forzar actualización
+      }, 100);
+
+    } catch (error) {
+      console.error('Error al asignar:', error);
+      alert('Error al asignar la persona. Por favor, intente nuevamente.');
+    }
   };
 
   // Función para navegar a un día específico desde la vista semanal
@@ -417,7 +577,10 @@ export default function AsignacionIntuitiva() {
   // Función para eliminar participante de un bloque
   const handleEliminarParticipante = async (bloque, participante) => {
     // Confirmación antes de eliminar
-    if (!window.confirm(`¿Estás seguro de que quieres desasignar a ${participante.nombre} del horario ${bloque.hora_inicio} - ${bloque.hora_fin}?`)) {
+    const codigoPersonal = participante.codigo || participante.codigoPersonal;
+    const identificador = codigoPersonal ? `${codigoPersonal} - ${participante.nombre}` : participante.nombre;
+    
+    if (!window.confirm(`¿Estás seguro de que quieres desasignar a ${identificador} del horario ${bloque.hora_inicio} - ${bloque.hora_fin}?`)) {
       return;
     }
 
@@ -460,7 +623,12 @@ export default function AsignacionIntuitiva() {
       }
 
       // Mostrar mensaje de éxito
-      console.log(`✅ ${participante.nombre} desasignado del horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+      const codigoPersonal = participante.codigo || participante.codigoPersonal;
+      const identificador = codigoPersonal ? `${codigoPersonal} - ${participante.nombre}` : participante.nombre;
+      console.log(`✅ ${identificador} desasignado del horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+      
+      // Forzar re-render
+      setForceUpdate(prev => prev + 1);
 
     } catch (error) {
       console.error('Error al desasignar:', error);
@@ -601,12 +769,33 @@ export default function AsignacionIntuitiva() {
           {/* Panel de Personal Disponible */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-4 sticky top-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                👥 Personal
-                <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                  {getPersonalDisponible().length}
-                </span>
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                  👥 Personal
+                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalPersonalVisible()}
+                  </span>
+                </h2>
+                
+                {/* Toggle para mostrar cuadrilla completa */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">
+                    {mostrarCuadrillaCompleta ? 'Cuadrilla completa' : 'Solo disponibles'}
+                  </span>
+                  <button
+                    onClick={() => setMostrarCuadrillaCompleta(!mostrarCuadrillaCompleta)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                      mostrarCuadrillaCompleta ? 'bg-purple-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        mostrarCuadrillaCompleta ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
               
               {/* Estadísticas rápidas */}
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
@@ -614,13 +803,33 @@ export default function AsignacionIntuitiva() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Disponibles:</span>
                     <span className="font-semibold text-green-600">
-                      {getPersonalDisponible().filter(p => !estaAsignado(p.id)).length}
+                      {mostrarCuadrillaCompleta ? 
+                        (() => {
+                          let total = 0;
+                          supervisores.forEach(supervisor => {
+                            const personalFiltrado = getPersonalPorSupervisor(supervisor.id);
+                            total += personalFiltrado.filter(p => !estaAsignado(p.id)).length;
+                          });
+                          return total;
+                        })() :
+                        getPersonalDisponible().filter(p => !estaAsignado(p.id)).length
+                      }
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Asignados:</span>
                     <span className="font-semibold text-blue-600">
-                      {getPersonalDisponible().filter(p => estaAsignado(p.id)).length}
+                      {mostrarCuadrillaCompleta ? 
+                        (() => {
+                          let total = 0;
+                          supervisores.forEach(supervisor => {
+                            const personalFiltrado = getPersonalPorSupervisor(supervisor.id);
+                            total += personalFiltrado.filter(p => estaAsignado(p.id)).length;
+                          });
+                          return total;
+                        })() :
+                        getPersonalDisponible().filter(p => estaAsignado(p.id)).length
+                      }
                     </span>
                   </div>
                 </div>
@@ -698,10 +907,14 @@ export default function AsignacionIntuitiva() {
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1">
-                                    <div className="font-medium text-sm">{persona.nombre}</div>
+                                    <div className="font-medium text-sm">
+                                      {persona.codigo || persona.codigoPersonal ? 
+                                        `${persona.codigo || persona.codigoPersonal} - ${persona.nombre}` : 
+                                        persona.nombre
+                                      }
+                                    </div>
                                   </div>
-                                  <div className="ml-2">
-                                    {yaAsignado ? (
+                                  <div className="ml-2">{yaAsignado ? (
                                       <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full font-medium">
                                         ✅
                                       </span>
@@ -816,17 +1029,11 @@ export default function AsignacionIntuitiva() {
                                     <div className="text-xs text-gray-500 mt-0.5">
                                       {Math.round(porcentajeOcupacion)}% ocupado
                                     </div>
-                                    <div className="text-xs text-blue-600 mt-1 font-medium">
-                                      👁️ Ver detalles
-                                    </div>
                                   </div>
                                 ) : (
                                   <div className="text-center py-2">
                                     <div className="text-xs text-gray-400">
                                       Disponible
-                                    </div>
-                                    <div className="text-xs text-blue-600 mt-1 font-medium">
-                                      👁️ Ver detalles
                                     </div>
                                   </div>
                                 )}
@@ -935,7 +1142,12 @@ export default function AsignacionIntuitiva() {
                               <div key={p.id} className="bg-green-100 border-2 border-green-400 text-green-900 px-2 py-2 rounded-lg group">
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm truncate">{p.nombre}</div>
+                                    <div className="font-medium text-sm truncate">
+                                      {p.codigo || p.codigoPersonal ? 
+                                        `${p.codigo || p.codigoPersonal} - ${p.nombre}` : 
+                                        p.nombre
+                                      }
+                                    </div>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">
@@ -947,7 +1159,7 @@ export default function AsignacionIntuitiva() {
                                         handleEliminarParticipante(bloque, p);
                                       }}
                                       className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full p-1"
-                                      title={`Desasignar a ${p.nombre}`}
+                                      title={`Desasignar a ${p.codigo || p.codigoPersonal ? `${p.codigo || p.codigoPersonal} - ${p.nombre}` : p.nombre}`}
                                     >
                                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -975,8 +1187,45 @@ export default function AsignacionIntuitiva() {
                             ⬇️ Suelta aquí para asignar
                           </div>
                         ) : (
-                          <div className="text-center py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
-                            🖱️ Arrastra personal aquí
+                          <div className="space-y-3">
+                            <div className="text-center py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+                              🖱️ Arrastra personal aquí
+                            </div>
+                            <div className="text-center text-gray-400 text-xs">o</div>
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={bloqueSeleccionado === bloque.id ? codigoPersonal : ''}
+                                onChange={(e) => {
+                                  setCodigoPersonal(e.target.value);
+                                  setBloqueSeleccionado(bloque.id);
+                                }}
+                                onFocus={() => {
+                                  setBloqueSeleccionado(bloque.id);
+                                  if (bloqueSeleccionado !== bloque.id) {
+                                    setCodigoPersonal('');
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleAsignarPorCodigo(bloque);
+                                  }
+                                }}
+                                placeholder="Código, cédula o ID del personal"
+                                className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                  bloqueSeleccionado && bloqueSeleccionado !== bloque.id 
+                                    ? 'border-gray-200 bg-gray-50 text-gray-400' 
+                                    : 'border-gray-300'
+                                }`}
+                              />
+                              <button
+                                onClick={() => handleAsignarPorCodigo(bloque)}
+                                disabled={!codigoPersonal.trim() || bloqueSeleccionado !== bloque.id}
+                                className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                              >
+                                ➕ Asignar por código
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
