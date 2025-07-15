@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  collection, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc
+  collection, getDocs, query, where, doc, updateDoc, arrayUnion, arrayRemove, getDoc
 } from 'firebase/firestore';
 import { useParams } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { format, parse, startOfWeek, addDays, isWithinInterval } from 'date-fns';
+import { format, addDays, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Sidebar from '../components/Sidebar';
 import BackButton from '../components/BackButton';
@@ -299,6 +299,14 @@ export default function AsignacionIntuitiva() {
     const cuadrillaCompleta = cuadrillas[supervisorId] || [];
     
     return cuadrillaCompleta.filter(persona => {
+      // Filtrar personal ya asignado - no mostrarlo en la lista de disponibles
+      if (estaAsignado(persona.id)) {
+        // Solo mostrar si específicamente se solicita ver los asignados
+        if (filtroDisponibilidad !== 'asignados') {
+          return false;
+        }
+      }
+      
       // Aplicar filtros
       if (filtroArea && !persona.area?.toLowerCase().includes(filtroArea.toLowerCase())) {
         return false;
@@ -377,16 +385,14 @@ export default function AsignacionIntuitiva() {
         return b;
       }));
 
-      // Remover de cuadrilla local
-      const supervisor = supervisores.find(s => 
-        cuadrillas[s.id]?.some(p => p.id === draggedPerson.id)
-      );
-      if (supervisor) {
-        setCuadrillas(prev => ({
-          ...prev,
-          [supervisor.id]: prev[supervisor.id].filter(p => p.id !== draggedPerson.id)
-        }));
-      }
+      // Actualizar cuadrillas - remover de la cuadrilla original
+      setCuadrillas(prev => {
+        const nuevasCuadrillas = { ...prev };
+        Object.keys(nuevasCuadrillas).forEach(supervisorId => {
+          nuevasCuadrillas[supervisorId] = nuevasCuadrillas[supervisorId].filter(p => p.id !== draggedPerson.id);
+        });
+        return nuevasCuadrillas;
+      });
 
       // Mostrar mensaje de éxito
       console.log(`✅ ${draggedPerson.nombre} asignado al horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
@@ -397,6 +403,69 @@ export default function AsignacionIntuitiva() {
     }
 
     setDraggedPerson(null);
+  };
+
+  // Función para navegar a un día específico desde la vista semanal
+  const handleClickHorario = (bloque) => {
+    const fechaBloque = createLocalDate(bloque.fecha);
+    if (fechaBloque) {
+      setFechaSeleccionada(fechaBloque);
+      setVistaActual('dia');
+    }
+  };
+
+  // Función para eliminar participante de un bloque
+  const handleEliminarParticipante = async (bloque, participante) => {
+    // Confirmación antes de eliminar
+    if (!window.confirm(`¿Estás seguro de que quieres desasignar a ${participante.nombre} del horario ${bloque.hora_inicio} - ${bloque.hora_fin}?`)) {
+      return;
+    }
+
+    try {
+      // Remover de Firebase usando arrayRemove
+      const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
+      await updateDoc(bloqueRef, {
+        participantes: arrayRemove(participante),
+      });
+
+      // Actualizar estado local del bloque
+      setBloques(prev => prev.map(b => {
+        if (b.id === bloque.id) {
+          return {
+            ...b,
+            participantes: (b.participantes || []).filter(p => p.id !== participante.id),
+          };
+        }
+        return b;
+      }));
+
+      // Reagregar la persona a su cuadrilla original
+      const supervisor = supervisores.find(s => 
+        s.id === participante.supervisor_id || 
+        (cuadrillas[s.id] && cuadrillas[s.id].some(p => p.codigo === participante.codigo))
+      );
+      
+      if (supervisor) {
+        setCuadrillas(prev => {
+          // Verificar si la persona ya está en la cuadrilla para evitar duplicados
+          const yaEstaEnCuadrilla = prev[supervisor.id]?.some(p => p.id === participante.id);
+          if (!yaEstaEnCuadrilla) {
+            return {
+              ...prev,
+              [supervisor.id]: [...(prev[supervisor.id] || []), participante]
+            };
+          }
+          return prev;
+        });
+      }
+
+      // Mostrar mensaje de éxito
+      console.log(`✅ ${participante.nombre} desasignado del horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
+
+    } catch (error) {
+      console.error('Error al desasignar:', error);
+      alert('Error al desasignar la persona. Por favor, intente nuevamente.');
+    }
   };
 
   // Obtener color para el estado del bloque
@@ -708,11 +777,13 @@ export default function AsignacionIntuitiva() {
                                 key={bloque.id}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) => handleDrop(e, bloque)}
-                                className={`p-2 rounded-lg border-2 transition-all hover:shadow-sm ${
+                                onClick={() => handleClickHorario(bloque)}
+                                className={`p-2 rounded-lg border-2 transition-all hover:shadow-md cursor-pointer ${
                                   draggedPerson && !estaLleno ? 'border-dashed border-purple-400 bg-purple-50' : ''
                                 } ${getColorBloque(bloque)} ${
-                                  estaLleno ? 'cursor-not-allowed' : 'cursor-pointer'
+                                  estaLleno ? 'hover:bg-red-100' : 'hover:bg-blue-50'
                                 }`}
+                                title={`Clic para ver detalles del ${format(dia, 'dd/MM/yyyy', { locale: es })}`}
                               >
                                 <div className="flex items-center justify-between mb-1">
                                   <div className="text-xs font-medium text-gray-700">
@@ -724,9 +795,9 @@ export default function AsignacionIntuitiva() {
                                 </div>
                                 
                                 {/* Barra de progreso */}
-                                <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                                   <div 
-                                    className={`h-1.5 rounded-full transition-all ${
+                                    className={`h-2 rounded-full transition-all ${
                                       porcentajeOcupacion === 0 ? 'bg-gray-300' :
                                       porcentajeOcupacion < 50 ? 'bg-green-500' :
                                       porcentajeOcupacion < 80 ? 'bg-yellow-500' :
@@ -736,20 +807,27 @@ export default function AsignacionIntuitiva() {
                                   ></div>
                                 </div>
                                 
-                                {/* Participantes asignados */}
-                                {bloque.participantes && bloque.participantes.length > 0 && (
-                                  <div className="space-y-1">
-                                    {bloque.participantes.slice(0, 3).map(p => (
-                                      <div key={p.id} className="text-xs bg-white bg-opacity-80 px-2 py-1 rounded border border-gray-200 flex items-center justify-between">
-                                        <span className="font-medium truncate flex-1">{p.nombre}</span>
-                                        <span className="text-gray-500 ml-1">{p.area || p.codigo}</span>
-                                      </div>
-                                    ))}
-                                    {bloque.participantes.length > 3 && (
-                                      <div className="text-xs text-gray-600 text-center py-1 bg-gray-100 rounded">
-                                        +{bloque.participantes.length - 3} más...
-                                      </div>
-                                    )}
+                                {/* Indicador de ocupación simplificado */}
+                                {bloque.participantes && bloque.participantes.length > 0 ? (
+                                  <div className="text-center py-1">
+                                    <div className="text-xs font-medium text-gray-700">
+                                      {ocupados} asignado{ocupados !== 1 ? 's' : ''}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      {Math.round(porcentajeOcupacion)}% ocupado
+                                    </div>
+                                    <div className="text-xs text-blue-600 mt-1 font-medium">
+                                      👁️ Ver detalles
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-2">
+                                    <div className="text-xs text-gray-400">
+                                      Disponible
+                                    </div>
+                                    <div className="text-xs text-blue-600 mt-1 font-medium">
+                                      👁️ Ver detalles
+                                    </div>
                                   </div>
                                 )}
                                 
@@ -854,12 +932,28 @@ export default function AsignacionIntuitiva() {
                         <div className="space-y-2 mb-3">
                           {bloque.participantes && bloque.participantes.length > 0 ? (
                             bloque.participantes.map(p => (
-                              <div key={p.id} className="bg-green-100 border-2 border-green-400 text-green-900 px-2 py-1 rounded-lg">
+                              <div key={p.id} className="bg-green-100 border-2 border-green-400 text-green-900 px-2 py-2 rounded-lg group">
                                 <div className="flex items-center justify-between">
-                                  <span className="font-medium text-xs">{p.nombre}</span>
-                                  <span className="text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">
-                                    ✅
-                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm truncate">{p.nombre}</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">
+                                      ✅
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEliminarParticipante(bloque, p);
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full p-1"
+                                      title={`Desasignar a ${p.nombre}`}
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ))
@@ -914,7 +1008,7 @@ export default function AsignacionIntuitiva() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-100 border-2 border-green-400 rounded flex-shrink-0"></div>
-                <span>Personal asignado (verde) - Ya tiene horario</span>
+                <span>Personal asignado (verde) - Pasa el cursor para desasignar ❌</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-50 border border-green-200 rounded flex-shrink-0"></div>
@@ -931,6 +1025,17 @@ export default function AsignacionIntuitiva() {
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-red-50 border border-red-200 rounded flex-shrink-0"></div>
                 <span>Horario completo (100%)</span>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg mt-3 border border-blue-200">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <span className="text-lg">💡</span>
+                  <span className="font-medium">Consejos:</span>
+                </div>
+                <div className="text-blue-700 text-xs mt-1 space-y-1">
+                  <div>• <strong>Vista Semana:</strong> Haz clic en cualquier horario para ver detalles del día</div>
+                  <div>• <strong>Vista Día:</strong> Permite desasignar personal pasando el cursor sobre el nombre</div>
+                  <div>• <strong>Personal asignado:</strong> Se oculta automáticamente de la lista de disponibles</div>
+                </div>
               </div>
             </div>
           </div>
