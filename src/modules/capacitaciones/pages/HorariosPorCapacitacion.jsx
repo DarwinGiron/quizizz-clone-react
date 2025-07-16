@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../firebase/config";
-import { Sidebar } from "../../../shared";
+import { Layout } from "../../../shared";
 import HorarioCard from "../components/HorarioCard";
 
 export default function HorariosPorCapacitacion() {
@@ -38,9 +38,8 @@ export default function HorariosPorCapacitacion() {
   }, [capacitacionId]);
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 ml-60">
+    <Layout>
+      <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Horarios disponibles</h1>
 
         {cargando ? (
@@ -59,6 +58,6 @@ export default function HorariosPorCapacitacion() {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 }

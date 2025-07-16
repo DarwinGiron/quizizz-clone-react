@@ -3,16 +3,18 @@ import { db } from '../../../firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaCheckCircle, FaTimesCircle, FaTrash, FaPlus } from 'react-icons/fa';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const colors = ['bg-red-500', 'bg-blue-500', 'bg-yellow-500', 'bg-green-500'];
 
-const CreateQuiz = () => {
+const CreateQuiz = ({ capacitacionVinculada, tipoEvaluacion }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
   // Si viene desde una capacitación vinculada, se precarga el título
-  const prefilledTitle = location.state?.titulo || '';
-  const linkedCapId = location.state?.linkedCapId || null;
+  const prefilledTitle = location.state?.titulo || (capacitacionVinculada ? `Evaluación - ${capacitacionVinculada.titulo}` : '');
+  const linkedCapId = location.state?.linkedCapId || capacitacionVinculada?.id || null;
 
   const [title, setTitle] = useState(prefilledTitle);
   const [questions, setQuestions] = useState([
@@ -62,6 +64,8 @@ const CreateQuiz = () => {
         questions,
         createdAt: new Date(),
         linkedCapId: linkedCapId || null,
+        tipoEvaluacion: tipoEvaluacion || 'evento',
+        capacitacionVinculada: capacitacionVinculada || null,
       };
 
       await addDoc(collection(db, 'quizzes'), newQuiz);
@@ -80,6 +84,38 @@ const CreateQuiz = () => {
       <h1 className="text-2xl font-bold mb-4">
         {linkedCapId ? 'Evaluación vinculada a capacitación' : 'Nueva evaluación'}
       </h1>
+
+      {/* Información de capacitación vinculada */}
+      {capacitacionVinculada && (
+        <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-purple-600">🎓</span>
+            <h3 className="font-semibold text-purple-800">Capacitación Vinculada</h3>
+          </div>
+          <div className="space-y-1 text-sm">
+            <p><strong>Título:</strong> {capacitacionVinculada.titulo}</p>
+            <p><strong>Categoría:</strong> {capacitacionVinculada.categoria}</p>
+            {capacitacionVinculada.fechaInicio && (
+              <p><strong>Fecha:</strong> {format(parseISO(capacitacionVinculada.fechaInicio), 'dd MMM yyyy', { locale: es })}</p>
+            )}
+            {capacitacionVinculada.instructor && (
+              <p><strong>Instructor:</strong> {capacitacionVinculada.instructor}</p>
+            )}
+          </div>
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <div className="flex items-start gap-2">
+              <span className="text-yellow-600">💡</span>
+              <div>
+                <p className="text-sm text-yellow-800 font-medium">Análisis disponible:</p>
+                <p className="text-xs text-yellow-700">
+                  Esta evaluación te permitirá analizar asistencia fuera de horarios asignados y 
+                  patrones de participación por bloque de capacitación.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <input
         value={title}

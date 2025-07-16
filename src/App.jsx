@@ -5,6 +5,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
 import MainLayout from './layouts/MainLayout';
 import confetti from './utils/confetti';
+import { SidebarProvider } from './shared';
 
 // Importaciones desde los módulos organizados
 import {
@@ -76,46 +77,48 @@ function App() {
   const [user] = useAuthState(auth);
 
   return (
-    <Router>
-      <Routes>
-        {/* Rutas públicas */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <SidebarProvider>
+      <Router>
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
 
-        {/* Rutas protegidas con layout */}
-        <Route path="/dashboard" element={<PrivateRoute><MainLayout><Dashboard /></MainLayout></PrivateRoute>} />
-        <Route path="/create" element={<PrivateRoute><MainLayout><CreateQuiz /></MainLayout></PrivateRoute>} />
-        <Route path="/myquizzes" element={<PrivateRoute><MainLayout><MyQuizzes /></MainLayout></PrivateRoute>} />
-        <Route path="/quiz/:id" element={<PrivateRoute><MainLayout><QuizDetail /></MainLayout></PrivateRoute>} />
-        <Route path="/edit/:id" element={<PrivateRoute><MainLayout><EditQuiz /></MainLayout></PrivateRoute>} />
-        <Route path="/preview/:id" element={<PrivateRoute><MainLayout><PreviewQuiz /></MainLayout></PrivateRoute>} />
-        <Route path="/live/:quizId/:sessionId" element={<PrivateRoute><LiveSession /></PrivateRoute>} />
-        <Route path="/sessions/:sessionId" element={<PrivateRoute><MainLayout><SessionsPage /></MainLayout></PrivateRoute>} />
-        <Route path="/sessions/:sessionId/report" element={<PrivateRoute><MainLayout><SessionReport /></MainLayout></PrivateRoute>} />
-        <Route path="/sessions/:sessionId/stats" element={<PrivateRoute><MainLayout><SessionStats /></MainLayout></PrivateRoute>} />
-        <Route path="/capacitaciones/:capacitacionId/horarios" element={<HorariosPorCapacitacion />} />
-        {/* Capacitaciones (también protegidas y con layout) */}
-        <Route path="/capacitaciones" element={<PrivateRoute><MainLayout><CapacitacionesDashboard /></MainLayout></PrivateRoute>} />
-        <Route path="/capacitaciones/nueva" element={<PrivateRoute><MainLayout><CreateCapacitacion /></MainLayout></PrivateRoute>} />
-        <Route path="/capacitaciones/:id/edit"element={<PrivateRoute><MainLayout><EditCapacitacion /></MainLayout></PrivateRoute>}/>
-        <Route path="/capacitaciones/:id/detalle"element={<PrivateRoute><MainLayout><CapacitacionDetail /></MainLayout></PrivateRoute>}/>
-        <Route path="/capacitaciones/:capacitacionId/horarios" element={<HorariosPorCapacitacion />}/>
-        <Route path="/usuarios" element={<PrivateRoute><MainLayout><UsuariosAdmin /></MainLayout></PrivateRoute>}/>
-        <Route path="/cuadrilla/:supervisorId"element={<PrivateRoute><MainLayout><GestionarCuadrilla /></MainLayout></PrivateRoute>}/>
-        <Route path="/evaluacion/nueva" element={<PrivateRoute><MainLayout><SeleccionTipoEvaluacion /></MainLayout></PrivateRoute>}/>
-        <Route path="/asignaciones" element={<Asignaciones />} />
-        <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
-        <Route path="/asignaciones/intuitiva/:capacitacionId" element={<AsignacionIntuitiva />} />
-        <Route path="/join" element={<JoinSession />} />
-        <Route path="/join/:sessionId" element={<JoinSession />} />
-        {/* Página de estadísticas en vivo para el admin (ahora pública) */}
-        <Route path="/admin/session/:quizId/:sessionId/stats" element={<SessionStatsAdmin />} />
-        <Route path="/estadisticas-totales/:sessionId" element={<PrivateRoute><EstadisticasTotales /></PrivateRoute>} />
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
-    </Router>
+          {/* Rutas protegidas con layout */}
+          <Route path="/dashboard" element={<PrivateRoute><MainLayout><Dashboard /></MainLayout></PrivateRoute>} />
+          <Route path="/create" element={<PrivateRoute><MainLayout><CreateQuiz /></MainLayout></PrivateRoute>} />
+          <Route path="/myquizzes" element={<PrivateRoute><MainLayout><MyQuizzes /></MainLayout></PrivateRoute>} />
+          <Route path="/quiz/:id" element={<PrivateRoute><MainLayout><QuizDetail /></MainLayout></PrivateRoute>} />
+          <Route path="/edit/:id" element={<PrivateRoute><MainLayout><EditQuiz /></MainLayout></PrivateRoute>} />
+          <Route path="/preview/:id" element={<PrivateRoute><MainLayout><PreviewQuiz /></MainLayout></PrivateRoute>} />
+          <Route path="/live/:quizId/:sessionId" element={<PrivateRoute><LiveSession /></PrivateRoute>} />
+          <Route path="/sessions/:sessionId" element={<PrivateRoute><MainLayout><SessionsPage /></MainLayout></PrivateRoute>} />
+          <Route path="/sessions/:sessionId/report" element={<PrivateRoute><MainLayout><SessionReport /></MainLayout></PrivateRoute>} />
+          <Route path="/sessions/:sessionId/stats" element={<PrivateRoute><MainLayout><SessionStats /></MainLayout></PrivateRoute>} />
+          <Route path="/capacitaciones/:capacitacionId/horarios" element={<HorariosPorCapacitacion />} />
+          {/* Capacitaciones (también protegidas y con layout) */}
+          <Route path="/capacitaciones" element={<PrivateRoute><MainLayout><CapacitacionesDashboard /></MainLayout></PrivateRoute>} />
+          <Route path="/capacitaciones/nueva" element={<PrivateRoute><MainLayout><CreateCapacitacion /></MainLayout></PrivateRoute>} />
+          <Route path="/capacitaciones/:id/edit"element={<PrivateRoute><MainLayout><EditCapacitacion /></MainLayout></PrivateRoute>}/>
+          <Route path="/capacitaciones/:id/detalle"element={<PrivateRoute><MainLayout><CapacitacionDetail /></MainLayout></PrivateRoute>}/>
+          <Route path="/capacitaciones/:capacitacionId/horarios" element={<HorariosPorCapacitacion />}/>
+          <Route path="/usuarios" element={<PrivateRoute><MainLayout><UsuariosAdmin /></MainLayout></PrivateRoute>}/>
+          <Route path="/cuadrilla/:supervisorId"element={<PrivateRoute><MainLayout><GestionarCuadrilla /></MainLayout></PrivateRoute>}/>
+          <Route path="/evaluacion/nueva" element={<PrivateRoute><MainLayout><SeleccionTipoEvaluacion /></MainLayout></PrivateRoute>}/>
+          <Route path="/asignaciones" element={<Asignaciones />} />
+          <Route path="/asignaciones/avanzada/:capacitacionId" element={<AsignacionAvanzada />} />
+          <Route path="/asignaciones/intuitiva/:capacitacionId" element={<AsignacionIntuitiva />} />
+          <Route path="/join" element={<JoinSession />} />
+          <Route path="/join/:sessionId" element={<JoinSession />} />
+          {/* Página de estadísticas en vivo para el admin (ahora pública) */}
+          <Route path="/admin/session/:quizId/:sessionId/stats" element={<SessionStatsAdmin />} />
+          <Route path="/estadisticas-totales/:sessionId" element={<PrivateRoute><EstadisticasTotales /></PrivateRoute>} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      </Router>
+    </SidebarProvider>
   );
 }
 

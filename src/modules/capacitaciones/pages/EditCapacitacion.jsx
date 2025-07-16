@@ -12,12 +12,20 @@ const EditCapacitacion = () => {
 
   useEffect(() => {
     const fetchCapacitacion = async () => {
-      const ref = doc(db, 'capacitaciones', id);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        setForm(snap.data());
-      } else {
-        alert('Capacitación no encontrada');
+      try {
+        const ref = doc(db, 'capacitaciones', id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          console.log('🔍 Datos cargados de Firebase:', data);
+          setForm(data);
+        } else {
+          alert('Capacitación no encontrada');
+          navigate('/capacitaciones');
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar capacitación:', error);
+        alert('Error al cargar la capacitación');
         navigate('/capacitaciones');
       }
     };
@@ -26,6 +34,7 @@ const EditCapacitacion = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (!form) return; // Protección para evitar errores si form es null
     setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
   };
 
@@ -36,7 +45,7 @@ const EditCapacitacion = () => {
 
     try {
       console.log('🔍 Datos del formulario antes de actualizar:', form);
-      console.log('🔍 Cupo que se va a actualizar:', form.cupo_bloque, typeof form.cupo_bloque);
+      console.log('🔍 Cupo que se va a actualizar:', form.cupo_bloque || form.cupoBloque, typeof (form.cupo_bloque || form.cupoBloque));
       
       // Actualizar la capacitación principal
       const ref = doc(db, 'capacitaciones', id);
@@ -49,7 +58,8 @@ const EditCapacitacion = () => {
       
       if (!bloquesSnapshot.empty) {
         const batch = writeBatch(db);
-        const nuevoCupo = Number(form.cupo_bloque);
+        // Obtener el cupo correcto, considerando ambos nombres de campo
+        const nuevoCupo = Number(form.cupo_bloque || form.cupoBloque || 0);
         
         console.log('🔍 Actualizando bloques con cupo:', nuevoCupo);
         
@@ -105,54 +115,51 @@ const EditCapacitacion = () => {
     <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
       <BackButton to="/capacitaciones" label="Volver a Capacitaciones" className="mb-4" />
       <h2 className="text-2xl font-bold mb-4">Editar Capacitación</h2>
-      <form onSubmit={handleUpdate} className="space-y-4">
-        <input
-          name="titulo"
-          value={form.titulo}
-          placeholder="Título"
-          className="w-full p-2 border rounded"
-          onChange={handleChange}
-        />
-        <textarea
-          name="descripcion"
-          value={form.descripcion}
-          placeholder="Descripción"
-          className="w-full p-2 border rounded"
-          onChange={handleChange}
-        />
+      <form onSubmit={handleUpdate} className="space-y-4">            <input
+              name="titulo"
+              value={form.titulo || ''}
+              placeholder="Título"
+              className="w-full p-2 border rounded"
+              onChange={handleChange}
+            />
+            <textarea
+              name="descripcion"
+              value={form.descripcion || ''}
+              placeholder="Descripción"
+              className="w-full p-2 border rounded"
+              onChange={handleChange}
+            />
 
         <div className="flex gap-4">
           <div className="flex-1">
-            <label>Fecha Inicio</label>
-            <input
-              type="date"
-              name="fecha_inicio"
-              value={form.fecha_inicio}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
-          </div>
-          <div className="flex-1">
-            <label>Fecha Fin</label>
-            <input
-              type="date"
-              name="fecha_fin"
-              value={form.fecha_fin}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
+            <label>Fecha Inicio</label>              <input
+                type="date"
+                name="fecha_inicio"
+                value={form.fecha_inicio || ''}
+                className="w-full p-2 border rounded"
+                onChange={handleChange}
+              />
+            </div>
+            <div className="flex-1">
+              <label>Fecha Fin</label>
+              <input
+                type="date"
+                name="fecha_fin"
+                value={form.fecha_fin || ''}
+                className="w-full p-2 border rounded"
+                onChange={handleChange}
+              />
           </div>
         </div>
 
         <div className="flex gap-4">
           <div className="flex-1">
-            <label>Duración por bloque</label>
-            <select
-              name="duracion_bloque"
-              value={form.duracion_bloque}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            >
+            <label>Duración por bloque</label>              <select
+                name="duracion_bloque"
+                value={form.duracion_bloque || ''}
+                className="w-full p-2 border rounded"
+                onChange={handleChange}
+              >
               <option value={30}>30 minutos</option>
               <option value={60}>60 minutos</option>
             </select>
@@ -162,7 +169,7 @@ const EditCapacitacion = () => {
             <input
               name="cupo_bloque"
               type="number"
-              value={form.cupo_bloque}
+              value={form.cupo_bloque || form.cupoBloque || ''}
               className="w-full p-2 border rounded"
               onChange={handleChange}
             />
@@ -171,24 +178,23 @@ const EditCapacitacion = () => {
 
         <div className="flex gap-4">
           <div className="flex-1">
-            <label>Hora inicio del día</label>
-            <input
-              type="time"
-              name="hora_inicio_dia"
-              value={form.hora_inicio_dia}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
-          </div>
-          <div className="flex-1">
-            <label>Hora fin del día</label>
-            <input
-              type="time"
-              name="hora_fin_dia"
-              value={form.hora_fin_dia}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
+            <label>Hora inicio del día</label>              <input
+                type="time"
+                name="hora_inicio_dia"
+                value={form.hora_inicio_dia || ''}
+                className="w-full p-2 border rounded"
+                onChange={handleChange}
+              />
+            </div>
+            <div className="flex-1">
+              <label>Hora fin del día</label>
+              <input
+                type="time"
+                name="hora_fin_dia"
+                value={form.hora_fin_dia || ''}
+                className="w-full p-2 border rounded"
+                onChange={handleChange}
+              />
           </div>
         </div>
 
@@ -196,7 +202,7 @@ const EditCapacitacion = () => {
           <input
             type="checkbox"
             name="descanso_medio_dia"
-            checked={form.descanso_medio_dia}
+            checked={form.descanso_medio_dia || false}
             onChange={handleChange}
           />
           Omitir horario de 12:00 a 14:00

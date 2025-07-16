@@ -42,8 +42,8 @@ const CapacitacionDetail = () => {
             titulo: 'Seguridad Industrial y Prevención de Riesgos',
             descripcion: 'Capacitación integral sobre normas de seguridad, identificación de riesgos y uso correcto de equipos de protección personal.',
             categoria: 'Seguridad',
-            fechaInicio: '2025-01-15',
-            fechaFin: '2025-01-30',
+            fecha_inicio: '2025-08-15',
+            fecha_fin: '2025-08-30',
             duracionBloque: 60,
             cupoBloque: 25,
             horaInicioDia: '08:00',
@@ -76,7 +76,7 @@ const CapacitacionDetail = () => {
             {
               id: 'bloque1',
               capacitacion_id: id,
-              fecha: '2025-01-15',
+              fecha: '2025-08-15',
               hora_inicio: '08:00',
               hora_fin: '09:00',
               cupo_disponible: 25,
@@ -86,7 +86,7 @@ const CapacitacionDetail = () => {
             {
               id: 'bloque2',
               capacitacion_id: id,
-              fecha: '2025-01-15',
+              fecha: '2025-08-15',
               hora_inicio: '09:00',
               hora_fin: '10:00',
               cupo_disponible: 25,
@@ -96,7 +96,7 @@ const CapacitacionDetail = () => {
             {
               id: 'bloque3',
               capacitacion_id: id,
-              fecha: '2025-01-16',
+              fecha: '2025-08-16',
               hora_inicio: '08:00',
               hora_fin: '09:00',
               cupo_disponible: 25,
@@ -106,7 +106,7 @@ const CapacitacionDetail = () => {
             {
               id: 'bloque4',
               capacitacion_id: id,
-              fecha: '2025-01-16',
+              fecha: '2025-08-16',
               hora_inicio: '10:00',
               hora_fin: '11:00',
               cupo_disponible: 25,
@@ -116,7 +116,7 @@ const CapacitacionDetail = () => {
             {
               id: 'bloque5',
               capacitacion_id: id,
-              fecha: '2025-01-17',
+              fecha: '2025-08-17',
               hora_inicio: '14:00',
               hora_fin: '15:00',
               cupo_disponible: 25,
@@ -311,9 +311,9 @@ const CapacitacionDetail = () => {
       'bg-yellow-50 border-yellow-200'
     ];
     
-    if (!capacitacion?.fechaInicio) return colors[0];
+    if (!capacitacion?.fecha_inicio) return colors[0];
     
-    const fechaInicio = parseISO(capacitacion.fechaInicio);
+    const fechaInicio = parseISO(capacitacion.fecha_inicio);
     const fechaBloque = parseISO(fecha);
     const dayIndex = differenceInDays(fechaBloque, fechaInicio);
     
@@ -333,9 +333,9 @@ const CapacitacionDetail = () => {
       'bg-yellow-100 text-yellow-800'
     ];
     
-    if (!capacitacion?.fechaInicio) return colors[0];
+    if (!capacitacion?.fecha_inicio) return colors[0];
     
-    const fechaInicio = parseISO(capacitacion.fechaInicio);
+    const fechaInicio = parseISO(capacitacion.fecha_inicio);
     const fechaBloque = parseISO(fecha);
     const dayIndex = differenceInDays(fechaBloque, fechaInicio);
     
@@ -368,7 +368,10 @@ const CapacitacionDetail = () => {
     const ocupacion = totalCupos > 0 ? (totalParticipantes / totalCupos) * 100 : 0;
     
     // Calcular cupo promedio por bloque desde los bloques reales
-    const cupoPorBloque = totalBloques > 0 ? Math.round(totalCupos / totalBloques) : (capacitacion.cupoBloque || capacitacion.cupo_bloque || 25);
+    // Protección contra capacitacion null/undefined
+    const cupoPorBloque = totalBloques > 0 ? 
+      Math.round(totalCupos / totalBloques) : 
+      (capacitacion?.cupoBloque || capacitacion?.cupo_bloque || 25);
     
     return {
       totalBloques,
@@ -379,8 +382,6 @@ const CapacitacionDetail = () => {
       ocupacion: Math.round(ocupacion)
     };
   };
-
-  const estadisticas = getEstadisticas();
 
   if (loading) {
     return (
@@ -414,6 +415,8 @@ const CapacitacionDetail = () => {
     );
   }
 
+  const estadisticas = getEstadisticas();
+
   return (
     <div className="flex">
       <Sidebar />
@@ -427,26 +430,26 @@ const CapacitacionDetail = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-3xl">
-                    {capacitacion.categoria === 'Seguridad' ? '🛡️' :
-                     capacitacion.categoria === 'Técnica' ? '⚙️' :
-                     capacitacion.categoria === 'Liderazgo' ? '👑' : '📚'}
+                    {capacitacion?.categoria === 'Seguridad' ? '🛡️' :
+                     capacitacion?.categoria === 'Técnica' ? '⚙️' :
+                     capacitacion?.categoria === 'Liderazgo' ? '👑' : '📚'}
                   </span>
                   <div>
                     <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full mb-2">
-                      {capacitacion.categoria || 'General'}
+                      {capacitacion?.categoria || 'General'}
                     </span>
                     <h1 className="text-3xl font-bold text-gray-900 leading-tight">
-                      {capacitacion.titulo}
+                      {capacitacion?.titulo}
                     </h1>
                   </div>
                 </div>
                 
                 <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                  {capacitacion.descripcion}
+                  {capacitacion?.descripcion}
                 </p>
 
                 {/* Información del instructor */}
-                {capacitacion.instructor && (
+                {capacitacion?.instructor && (
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xl">👨‍🏫</span>
                     <span className="text-gray-700 font-medium">Instructor: {capacitacion.instructor}</span>
@@ -455,14 +458,14 @@ const CapacitacionDetail = () => {
 
                 {/* Fechas y duración */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  {capacitacion.fechaInicio && capacitacion.fechaFin && (
+                  {capacitacion?.fecha_inicio && capacitacion?.fecha_fin && (
                     <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-blue-600">📅</span>
                         <span className="text-sm font-medium text-blue-800">Duración</span>
                       </div>
                       <p className="text-blue-900 font-semibold">
-                        {format(parseISO(capacitacion.fechaInicio), 'dd MMM', { locale: es })} - {format(parseISO(capacitacion.fechaFin), 'dd MMM yyyy', { locale: es })}
+                        {format(parseISO(capacitacion.fecha_inicio), 'dd MMM', { locale: es })} - {format(parseISO(capacitacion.fecha_fin), 'dd MMM yyyy', { locale: es })}
                       </p>
                     </div>
                   )}
@@ -472,7 +475,7 @@ const CapacitacionDetail = () => {
                       <span className="text-green-600">⏱️</span>
                       <span className="text-sm font-medium text-green-800">Bloque</span>
                     </div>
-                    <p className="text-green-900 font-semibold">{capacitacion.duracionBloque || 60} minutos</p>
+                    <p className="text-green-900 font-semibold">{capacitacion?.duracionBloque || 60} minutos</p>
                   </div>
                   
                   <div className="bg-orange-50 rounded-lg p-4">
@@ -489,13 +492,13 @@ const CapacitacionDetail = () => {
                       <span className="text-sm font-medium text-purple-800">Horario</span>
                     </div>
                     <p className="text-purple-900 font-semibold">
-                      {capacitacion.horaInicioDia || '08:00'} - {capacitacion.horaFinDia || '17:00'}
+                      {capacitacion?.horaInicioDia || '08:00'} - {capacitacion?.horaFinDia || '17:00'}
                     </p>
                   </div>
                 </div>
 
                 {/* Objetivos */}
-                {capacitacion.objetivos && (
+                {capacitacion?.objetivos && (
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                       <span>🎯</span>

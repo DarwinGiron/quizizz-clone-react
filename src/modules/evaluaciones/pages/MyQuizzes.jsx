@@ -3,6 +3,7 @@ import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'fireb
 import { db } from '../../../firebase/config';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMoreVertical, FiEye, FiUsers, FiTrendingUp, FiCalendar } from 'react-icons/fi';
+import { TipoEvaluacionModal, EstadisticasCapacitacionModal } from '../components';
 
 const MyQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -10,6 +11,9 @@ const MyQuizzes = () => {
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [loading, setLoading] = useState(true);
+  const [showTipoModal, setShowTipoModal] = useState(false);
+  const [showEstadisticasModal, setShowEstadisticasModal] = useState(false);
+  const [selectedQuizForStats, setSelectedQuizForStats] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -144,12 +148,31 @@ const MyQuizzes = () => {
     setDropdownOpen(index);
   };
 
+  const handleTipoEvaluacionSelect = (seleccion) => {
+    if (seleccion.tipo === 'capacitacion') {
+      // Navegar a crear evaluación con capacitación vinculada
+      navigate('/create', { 
+        state: { 
+          capacitacionVinculada: seleccion.capacitacion,
+          tipoEvaluacion: 'capacitacion'
+        }
+      });
+    } else {
+      // Navegar a crear evaluación como evento aislado
+      navigate('/create', { 
+        state: { 
+          tipoEvaluacion: 'evento'
+        }
+      });
+    }
+  };
+
   return (
     <div className="flex justify-center pt-8 min-h-[60vh] p-8 relative">
       <div className="w-full max-w-6xl">
         <div className="flex justify-end mb-4">
           <button
-            onClick={() => navigate('/create')}
+            onClick={() => setShowTipoModal(true)}
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-5 rounded-2xl shadow-md transition-all duration-200"
           >
             <span className="text-xl leading-none">➕</span>
@@ -218,12 +241,27 @@ const MyQuizzes = () => {
                         {/* Header */}
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1">
-                            <h2 className="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors mb-2 line-clamp-2">
-                              {quiz.title}
-                            </h2>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <FiCalendar size={14} />
-                              <span>Última sesión: {formatDate(stats.lastSessionDate)}</span>
+                            <div className="flex items-center gap-2 mb-2">
+                              <h2 className="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors line-clamp-2">
+                                {quiz.title}
+                              </h2>
+                              {quiz.capacitacionVinculada && (
+                                <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                                  🎓 Vinculada
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <FiCalendar size={14} />
+                                <span>Última sesión: {formatDate(stats.lastSessionDate)}</span>
+                              </div>
+                              {quiz.capacitacionVinculada && (
+                                <div className="flex items-center gap-2 text-sm text-purple-600">
+                                  <span>📚</span>
+                                  <span>Capacitación: {quiz.capacitacionVinculada.titulo}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -238,6 +276,19 @@ const MyQuizzes = () => {
                             >
                               <FiEye size={18} />
                             </button>
+                            {quiz.capacitacionVinculada && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedQuizForStats(quiz);
+                                  setShowEstadisticasModal(true);
+                                }}
+                                title="Estadísticas de Capacitación"
+                                className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                              >
+                                <span className="text-sm">📊</span>
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
@@ -373,6 +424,23 @@ const MyQuizzes = () => {
           </button>
         </div>
       )}
+
+      {/* Modal para seleccionar tipo de evaluación */}
+      <TipoEvaluacionModal
+        isOpen={showTipoModal}
+        onClose={() => setShowTipoModal(false)}
+        onSelect={handleTipoEvaluacionSelect}
+      />
+
+      {/* Modal para estadísticas de capacitación */}
+      <EstadisticasCapacitacionModal
+        isOpen={showEstadisticasModal}
+        onClose={() => {
+          setShowEstadisticasModal(false);
+          setSelectedQuizForStats(null);
+        }}
+        quiz={selectedQuizForStats}
+      />
     </div>
   );
 };
