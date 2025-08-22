@@ -1,7 +1,40 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Sidebar flotante custom */
+.sidebar-float {
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  border-radius: 24px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+/* Estilos para las tarjetas mejoradas */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Animación de hover para las tarjetas */
+.card-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
 
 /* Estilos para el contenedor principal del calendario */
 .react-calendar {
