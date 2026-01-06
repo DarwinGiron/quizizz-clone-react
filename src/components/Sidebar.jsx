@@ -1,67 +1,114 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FiHome, FiLogOut, FiMap, FiBookOpen, FiCalendar } from 'react-icons/fi';
+import { FiHome, FiLogOut, FiMap, FiBookOpen, FiCalendar, FiMenu, FiSearch } from 'react-icons/fi';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
+import './Sidebar.css'; // Import the CSS file
 
 const Sidebar = () => {
+  const [isCollapsed, setIsCollapsed] = useState(document.body.classList.contains('collapsed'));
   const location = useLocation();
-  const active = (path) =>
-    location.pathname === path
-      ? 'bg-purple-100 text-purple-700'
-      : 'text-gray-700';
+  const active = (path) => (location.pathname === path ? 'active' : '');
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+    document.body.classList.toggle('collapsed');
+  };
+
+  // Effect to handle initial collapsed state based on body class
+  useEffect(() => {
+    setIsCollapsed(document.body.classList.contains('collapsed'));
+  }, []);
 
   return (
-    <div className="hidden md:flex h-screen w-60 bg-white border-r shadow-sm fixed left-0 top-0 flex-col justify-between z-50">
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-purple-700 mb-8">Convocatorias</h1>
-        <nav className="flex flex-col space-y-4">
-          <Link
-            to="/dashboard"
-            className={`flex items-center gap-2 px-3 py-2 rounded hover:bg-purple-50 ${active('/dashboard')}`}
-          >
-            <FiHome /> Dashboard
-          </Link>
-          <Link
-            to="/usuarios"
-            className={`flex items-center gap-2 px-3 py-2 rounded hover:bg-purple-50 ${active('/usuarios')}`}
-          >
-            <FiBookOpen /> Usuarios
-          </Link>
 
-          <Link
-            to="/capacitaciones"
-            className={`flex items-center gap-2 px-3 py-2 rounded hover:bg-purple-50 ${active('/capacitaciones')}`}
-          >
-            <FiCalendar /> Capacitaciones
-          </Link>
-
-          <Link
-            to="/asignaciones"
-            className={`flex items-center gap-2 px-3 py-2 rounded hover:bg-purple-50 ${active('/asignaciones')}`}
-          >
-            <FiBookOpen /> Asignaciones
-          </Link>
-
-          <Link
-            to="/myquizzes"
-            className={`flex items-center gap-2 px-3 py-2 rounded hover:bg-purple-50 ${active('/myquizzes')}`}
-          >
-            <FiMap /> Gamificación
-          </Link>
-
-        </nav>
+    <div className="sidebar">
+      <div className="header">
+ {/* Replace with your logo or site title */}
+        <h2 className="text-xl font-bold text-white">Astra</h2>
+        <button className="collapse-toggle-btn">
+ <FiMenu />
+        </button>
       </div>
-      <div className="p-6 border-t">
+      <div className="search-wrapper">
+        <FiSearch className="search-icon" />
+        <input type="text" placeholder="Search for anything..." className="search-input" />
+      </div>
+      <div className="sidebar-links">
+        <ul>
+          <li>
+            <Link
+              to="/dashboard"
+              className={`link ${active('/dashboard')}`}
+            >
+              <FiHome />
+              <span>Dashboard</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/usuarios"
+              className={`link ${active('/usuarios')}`}
+            >
+              <FiBookOpen />
+              <span>Usuarios</span>
+            </Link>
+          </li>
+
+          <li>
+            <Link
+              to="/capacitaciones"
+              className={`link ${active('/capacitaciones')}`}
+            >
+              <FiCalendar />
+              <span>Capacitaciones</span>
+            </Link>
+          </li>
+
+          <li>
+            <Link
+              to="/asignaciones"
+              className={`link ${active('/asignaciones')}`}
+            >
+              <FiBookOpen />
+              <span>Asignaciones</span>
+            </Link>
+          </li>
+
+          <li>
+            <Link
+              to="/myquizzes"
+              className={`link ${active('/myquizzes')}`}
+            >
+              <FiMap />
+              <span>Gamificación</span>
+            </Link>
+          </li>
+
+        </ul>
+      </div>
+      <div className="bottom-links">
+        <div className="profile-part">
+          <div className="avatar_wrapper">
+            {/* Replace with user avatar */}
+            <div className="avatar"></div>
+          </div>
+          <div className="user-info">
+            <div className="user-name">User Name</div> {/* Replace with dynamic user name */}
+            <div className="email">user@example.com</div> {/* Replace with dynamic user email */}
+          </div>
+        </div>
         <button
-          onClick={() => signOut(auth)}
-          className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-500"
+          onClick={toggleCollapse}
+          className="logout"
         >
           <FiLogOut /> Cerrar sesión
         </button>
       </div>
     </div>
-  );
+    <button className="expand-btn-outside" onClick={toggleCollapse}>
+ <FiMenu style={{ transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+ </button>
 };
 
 export default Sidebar;
