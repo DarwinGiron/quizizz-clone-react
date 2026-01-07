@@ -1,114 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { FiHome, FiLogOut, FiMap, FiBookOpen, FiCalendar, FiMenu, FiSearch } from 'react-icons/fi';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import './Sidebar.css'; // Import the CSS file
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; 
+import { LogOut, ChevronDown, Settings, BarChart2, Users, BookOpen, Clipboard, Award, PlusCircle, Zap } from 'lucide-react';
 
 const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(document.body.classList.contains('collapsed'));
+  const { logout } = useAuth();
   const location = useLocation();
-  const active = (path) => (location.pathname === path ? 'active' : '');
+  const [isSettingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const settingsMenuRef = useRef(null);
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-    document.body.classList.toggle('collapsed');
-  };
-
-  // Effect to handle initial collapsed state based on body class
+  // Cierra el menú de ajustes si se hace clic fuera de él
   useEffect(() => {
-    setIsCollapsed(document.body.classList.contains('collapsed'));
+    const handleClickOutside = (event) => {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target)) {
+        setSettingsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const NavItem = ({ to, icon, children }) => {
+    const isActive = location.pathname.startsWith(to);
+    // CORREGIDO: Se usa hover:text-text-primary
+    return (
+      <NavLink to={to} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 ${isActive ? 'bg-accent-strong text-accent-text font-semibold' : 'text-text-secondary hover:bg-hover hover:text-text-primary'}`}>
+        {icon}
+        <span className="text-sm">{children}</span>
+      </NavLink>
+    );
+  };
+
   return (
-
-    <div className="sidebar">
-      <div className="header">
- {/* Replace with your logo or site title */}
-        <h2 className="text-xl font-bold text-white">Astra</h2>
-        <button className="collapse-toggle-btn">
- <FiMenu />
-        </button>
-      </div>
-      <div className="search-wrapper">
-        <FiSearch className="search-icon" />
-        <input type="text" placeholder="Search for anything..." className="search-input" />
-      </div>
-      <div className="sidebar-links">
-        <ul>
-          <li>
-            <Link
-              to="/dashboard"
-              className={`link ${active('/dashboard')}`}
-            >
-              <FiHome />
-              <span>Dashboard</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/usuarios"
-              className={`link ${active('/usuarios')}`}
-            >
-              <FiBookOpen />
-              <span>Usuarios</span>
-            </Link>
-          </li>
-
-          <li>
-            <Link
-              to="/capacitaciones"
-              className={`link ${active('/capacitaciones')}`}
-            >
-              <FiCalendar />
-              <span>Capacitaciones</span>
-            </Link>
-          </li>
-
-          <li>
-            <Link
-              to="/asignaciones"
-              className={`link ${active('/asignaciones')}`}
-            >
-              <FiBookOpen />
-              <span>Asignaciones</span>
-            </Link>
-          </li>
-
-          <li>
-            <Link
-              to="/myquizzes"
-              className={`link ${active('/myquizzes')}`}
-            >
-              <FiMap />
-              <span>Gamificación</span>
-            </Link>
-          </li>
-
-        </ul>
-      </div>
-      <div className="bottom-links">
-        <div className="profile-part">
-          <div className="avatar_wrapper">
-            {/* Replace with user avatar */}
-            <div className="avatar"></div>
-          </div>
-          <div className="user-info">
-            <div className="user-name">User Name</div> {/* Replace with dynamic user name */}
-            <div className="email">user@example.com</div> {/* Replace with dynamic user email */}
-          </div>
+    <div className="w-64 h-screen flex flex-col justify-between p-4 bg-secondary border-r border-border">
+      <div>
+        <div className="mb-10 pl-2">
+          {/* CORREGIDO: Se usa text-text-primary */}
+          <h1 className="text-2xl font-bold text-text-primary">W.</h1>
         </div>
-        <button
-          onClick={toggleCollapse}
-          className="logout"
-        >
-          <FiLogOut /> Cerrar sesión
+        <nav className="flex flex-col gap-2">
+          <NavItem to="/dashboard" icon={<BarChart2 size={20} />}>Dashboard</NavItem>
+          <NavItem to="/usuarios" icon={<Users size={20} />}>Usuarios</NavItem>
+          <NavItem to="/capacitaciones" icon={<BookOpen size={20} />}>Capacitaciones</NavItem>
+          <NavItem to="/asignaciones" icon={<Clipboard size={20} />}>Asignaciones</NavItem>
+
+          <h2 className="text-xs font-bold uppercase text-text-muted mt-6 mb-2 ml-4">Gamificación</h2>
+          <NavItem to="/my-quizzes" icon={<Award size={20} />}>Mis Quizzes</NavItem>
+          <NavItem to="/create-quiz" icon={<PlusCircle size={20} />}>Crear Quiz</NavItem>
+          <NavItem to="/sessions" icon={<Zap size={20} />}>Sesiones Activas</NavItem>
+        </nav>
+      </div>
+
+      <div className="relative" ref={settingsMenuRef}>
+        {isSettingsMenuOpen && (
+          <div className="absolute bottom-full mb-2 w-full bg-tertiary rounded-lg shadow-xl border border-border overflow-hidden">
+             {/* CORREGIDO: Se usa hover:text-text-primary */}
+            <NavLink to="/settings" onClick={() => setSettingsMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-hover hover:text-text-primary">
+              <Settings size={18} />
+              <span>Ajustes</span>
+            </NavLink>
+            <button onClick={logout} className="flex items-center w-full gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10">
+              <LogOut size={18} />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        )}
+         {/* CORREGIDO: Se usa hover:text-text-primary */}
+        <button onClick={() => setSettingsMenuOpen(!isSettingsMenuOpen)} className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-text-secondary hover:bg-hover hover:text-text-primary">
+          <span className="text-sm font-semibold">Ajustes</span>
+          <ChevronDown size={20} className={`transition-transform duration-300 ${isSettingsMenuOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
     </div>
-    <button className="expand-btn-outside" onClick={toggleCollapse}>
- <FiMenu style={{ transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)' }} />
- </button>
+  );
 };
 
 export default Sidebar;

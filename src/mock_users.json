@@ -1,0 +1,22 @@
+[
+  {
+    "codigo": "12345",
+    "nombre": "Juan Perez (Ejemplo)",
+    "area": "Operaciones"
+  },
+  {
+    "codigo": "67890",
+    "nombre": "Ana Gomez (Ejemplo)",
+    "area": "Logística"
+  },
+  {
+    "codigo": "11223",
+    "nombre": "Carlos Ruiz (Ejemplo)",
+    "area": "Técnico"
+  },
+  {
+    "codigo": "00000",
+    "nombre": "Usuario de Prueba",
+    "area": "Calidad"
+  }
+]

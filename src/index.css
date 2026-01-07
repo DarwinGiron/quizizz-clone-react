@@ -1,66 +1,89 @@
-
+/* Importa las utilidades de Tailwind */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos para el contenedor principal del calendario */
-.react-calendar {
-  border-radius: 0.5rem; /* Tailwind rounded-md */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tailwind shadow-md */
-  font-family: inherit; /* Usar la fuente del proyecto */
-  width: 100%; /* Ajustar al ancho del contenedor */
-  max-width: 300px; /* O un ancho máximo que prefieras */
-  background-color: #fff; /* Fondo blanco */
-  border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
-}
+/* 
+  Definición de Variables de Color para el Sistema de Temas
+  - El tema OSCURO es el predeterminado (:root).
+  - El tema CLARO sobrescribe estas variables cuando la clase .light está presente.
+  - El COLOR DE ACENTO se define por separado y se aplica con clases como .theme-purple.
+*/
 
-/* Estilos para la navegación (botones de mes/año) */
-.react-calendar__navigation {
-  display: flex;
-  height: 40px; /* Tailwind h-10 */
-  margin-bottom: 1rem; /* Tailwind mb-4 */
-}
+@layer base {
+  :root {
+    /* Paleta base (Oscura por defecto) */
+    --background-primary: #111827;   /* gray-900 */
+    --background-secondary: #1f2937; /* gray-800 */
+    --background-tertiary: #374151;  /* gray-700 */
+    --background-hover: #4b5563;     /* gray-600 */
 
-.react-calendar__navigation button {
-  min-width: 40px;
-  background: none;
-  font-size: 0.875rem; /* Tailwind text-sm */
-  color: #4b5563; /* Tailwind text-gray-600 */
-}
+    --border-primary: #374151;       /* gray-700 */
+    --border-secondary: #4b5563;     /* gray-600 */
 
-.react-calendar__navigation button:enabled:hover,
-.react-calendar__navigation button:enabled:focus {
-  background-color: #e5e7eb; /* Tailwind bg-gray-200 */
-}
+    --text-primary: #f9fafb;         /* gray-50 */
+    --text-secondary: #d1d5db;       /* gray-300 */
+    --text-muted: #9ca3af;           /* gray-400 */
+    --text-inverted: #111827;        /* gray-900 */
+    
+    /* Colores de acento (Púrpura por defecto) */
+    --accent-color: #8b5cf6;         /* purple-500 */
+    --accent-color-strong: #7c3aed;  /* purple-600 */
+    --accent-color-hover: #9d6cfe;   /* adjusted */
+    --accent-text: #ffffff;          /* white */
+    --accent-soft-bg: rgba(124, 58, 237, 0.1); /* purple-600 with opacity */
+  }
 
-/* Estilos para la cabecera de los días de la semana */
-.react-calendar__month-view__weekdays {
-  text-align: center;
-  text-transform: uppercase;
-  font-weight: 600; /* Tailwind font-semibold */
-  font-size: 0.75rem; /* Tailwind text-xs */
-  color: #6b7280; /* Tailwind text-gray-500 */
-}
+  html.light {
+    /* Paleta para el tema claro */
+    --background-primary: #ffffff;   /* white */
+    --background-secondary: #f3f4f6; /* gray-100 */
+    --background-tertiary: #e5e7eb;  /* gray-200 */
+    --background-hover: #d1d5db;     /* gray-300 */
 
-.react-calendar__month-view__weekdays__weekday {
-  padding: 0.5em;
-}
+    --border-primary: #e5e7eb;       /* gray-200 */
+    --border-secondary: #d1d5db;     /* gray-300 */
 
-/* Estilos para los días individuales (tiles) */
-.react-calendar__tile {
-  padding: 0.75em 0.5em; /* Ajustar padding */
-  font-size: 0.875rem; /* Tailwind text-sm */
-  color: #374151; /* Tailwind text-gray-700 */
-  border: none !important; /* Eliminar el borde por defecto de los días */
-}
+    --text-primary: #1f2937;         /* gray-800 */
+    --text-secondary: #374151;       /* gray-700 */
+    --text-muted: #6b7280;           /* gray-500 */
+    --text-inverted: #f9fafb;        /* gray-50 */
+  }
 
-.react-calendar__tile:enabled:hover,
-.react-calendar__tile:enabled:focus {
-  background-color: #e5e7eb; /* Tailwind bg-gray-200 */
-  color: #1f2937; /* Tailwind text-gray-800 */
-}
+  /* --- Paletas de Colores de Acento --- */
 
-/* Estilos para los días de otros meses */
-.react-calendar__month-view__days__day--neighboringMonth {
-  color: #9ca3af; /* Tailwind text-gray-400 */
+  html.theme-purple {
+    --accent-color: #8b5cf6;         /* purple-500 */
+    --accent-color-strong: #7c3aed;  /* purple-600 */
+    --accent-color-hover: #9d6cfe;   /* adjusted */
+    --accent-text: #ffffff;
+    --accent-soft-bg: rgba(124, 58, 237, 0.1);
+  }
+
+  html.theme-blue {
+    --accent-color: #3b82f6;         /* blue-500 */
+    --accent-color-strong: #2563eb;  /* blue-600 */
+    --accent-color-hover: #60a5fa;   /* blue-400 */
+    --accent-text: #ffffff;
+    --accent-soft-bg: rgba(37, 99, 235, 0.1);
+  }
+
+  html.theme-green {
+    --accent-color: #10b981;         /* green-500 */
+    --accent-color-strong: #059669;  /* green-600 */
+    --accent-color-hover: #34d399;   /* green-400 */
+    --accent-text: #ffffff;
+    --accent-soft-bg: rgba(5, 150, 105, 0.1);
+  }
+
+  /* 
+    Aplicación base de las variables.
+    Esto asegura que los estilos base de la app (como el color de fondo)
+    se actualicen automáticamente con el cambio de tema.
+  */
+  body {
+    background-color: var(--background-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
 }

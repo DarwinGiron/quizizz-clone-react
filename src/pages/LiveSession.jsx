@@ -1,182 +1,145 @@
-// LiveSession.jsx actualizado con Realtime Database y Firestore para cargar preguntas
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Importar useNavigate
-import { ref, onValue, set } from 'firebase/database'; // Importar set
-import { rtdb, db } from '../firebase/config'; // Asegúrate de exportar tu RTDB y db (Firestore) en config.js
-import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
-import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
-
+import { useParams, useNavigate } from 'react-router-dom';
+import { ref, onValue, update } from 'firebase/database';
+import { rtdb } from '../firebase/config';
+import { QRCodeCanvas } from 'qrcode.react';
+import { Users, QrCode } from 'lucide-react'; // Using icons for a cleaner look
 
 const LiveSession = () => {
-  const { quizId, sessionId } = useParams();
-  const navigate = useNavigate(); // Inicializar useNavigate
+  const { sessionId } = useParams();
+  const navigate = useNavigate();
   const [participants, setParticipants] = useState([]);
   const [showQR, setShowQR] = useState(false);
-  const [sessionStatus, setSessionStatus] = useState('waiting'); // Estado de la sesión
-  const [sessionJoinCode, setSessionJoinCode] = useState(null); // Estado para el código de unión de la sesión
-  const [quizQuestions, setQuizQuestions] = useState([]); // Estado para las preguntas del quiz
+  const [sessionData, setSessionData] = useState(null);
+  const [error, setError] = useState('');
 
-  const joinLink = `${window.location.origin}/join/${sessionId}`;
+  const joinUrl = `${window.location.origin}/join`;
 
   useEffect(() => {
-    // Listener para participantes
-    const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
-    const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
-      const data = snapshot.val();
-      const list = data ? Object.values(data) : [];
-      setParticipants(list);
-    });
-
-    // Listener para el estado general de la sesión y el joinCode
     const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
-    const unsubscribeSession = onValue(sessionRef, (snapshot) => {
+
+    const unsubscribe = onValue(sessionRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setSessionStatus(data.status || 'waiting'); // Default to waiting if status is not set
-        setSessionJoinCode(data.joinCode || null); // Store the joinCode
+        setSessionData(data);
+        const participantsList = data.participants ? Object.values(data.participants) : [];
+        setParticipants(participantsList);
+      } else {
+        setError('La sesión no fue encontrada o ha sido cerrada.');
+        // Optional: Redirect after a delay if session is not found
+        setTimeout(() => navigate('/my-quizzes'), 3000);
       }
     });
 
+    return () => unsubscribe();
+  }, [sessionId, navigate]);
 
-    return () => {
-      unsubscribeParticipants();
-      unsubscribeSession(); // Limpiar también el listener de la sesión
-    };
-  }, [sessionId]);
-
-  const startSession = async () => { // Hacer la función async
-    if (sessionStatus === 'waiting') {
-       // Generar el joinCode aquí si no se hizo al crear la sesión RTDB
-       // const generatedJoinCode = Math.floor(100000 + Math.random() * 900000);
-
-      // 1. Cambiar el estado de la sesión en Realtime Database
-      // Asumimos que el joinCode ya fue guardado en RTDB al crear la sesión por StartLiveSessionButton
+  const startSession = async () => {
+    if (sessionData.status === 'waiting' && participants.length > 0) {
       const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
-      await set(sessionRef, { // Usar set para establecer la estructura inicial si no existe
-         status: 'started',
-         quizId: quizId, // Guardar quizId en la sesión RTDB
-         // Otros datos iniciales de la sesión
-      });
-
-      // 2. Cargar las preguntas del quiz desde Firestore
-      const quizDocRef = doc(db, 'quizzes', quizId);
-      const quizDocSnap = await getDoc(quizDocRef);
-
-      if (quizDocSnap.exists() && quizDocSnap.data().questions) {
-        setQuizQuestions(quizDocSnap.data().questions);
-        console.log('Quiz questions loaded:', quizDocSnap.data().questions.length);
-         // Aquí podrías también guardar las preguntas en RTDB si es necesario para JoinSession
-         // await set(ref(rtdb, `liveSessions/${sessionId}/questions`), quizDocSnap.data().questions);
-
-      } else {
-        console.error('Quiz document not found or has no questions.');
-        // Manejar error o notificar al usuario
-      }
-
-       // setSessionStatus('started'); // Esto ya lo hace el listener de la sesión al actualizar RTDB
+      await update(sessionRef, { status: 'started' });
+      // Navigate to the actual quiz playing screen for the host (to be created)
+      // For now, we can just show a confirmation.
+      console.log('Quiz started!');
     }
   };
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <p className="text-xl text-yellow-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (!sessionData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <p className="text-xl text-white animate-pulse">Cargando sala de espera...</p>
+      </div>
+    );
+  }
+  
+  if (sessionData.status === 'started') {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-900">
+            <div className="text-center text-white">
+                <h1 className="text-4xl font-bold mb-4">¡El quiz ha comenzado!</h1>
+                <p>La vista de presentación del quiz aún está en desarrollo.</p>
+                <button onClick={() => navigate('/my-quizzes')} className="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
+                    Volver a Mis Quizzes
+                </button>
+            </div>
+        </div>
+      )
+  }
 
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-purple-800 to-black text-white font-sans relative overflow-hidden">
-      {/* Botón Regresar en la esquina superior izquierda */}
-      <button
-        onClick={() => navigate(-1)}
-        className="absolute top-4 left-4 px-4 py-2 border border-white text-white rounded-md bg-white bg-opacity-10 hover:bg-opacity-20 transition z-10"
-      >
-        Regresar
-      </button>
+    <div className="flex flex-col h-screen bg-gray-900 text-white font-sans" style={{background: 'linear-gradient(135deg, #1e0a4f, #4a00e0)'}}>
+      {/* --- Header --- */}
+      <header className="flex justify-between items-center p-4 md:p-6">
+        <span className="text-2xl font-bold">W.</span>
+        <button
+          onClick={() => navigate('/my-quizzes')}
+          className="px-4 py-2 border border-white/50 text-white rounded-lg bg-white/10 hover:bg-white/20 transition text-sm"
+        >
+          Salir de la sesión
+        </button>
+      </header>
 
-
-      <div className="max-w-4xl mx-auto pt-12 px-6">
-        {/* Encabezado de la sesión (instrucciones, código, QR) */}
-        <div className="border border-purple-600 rounded-lg p-6 flex flex-col sm:flex-row justify-between items-center bg-black bg-opacity-30 backdrop-blur-md shadow-xl">
-          {/* Instrucciones + Código */}
-          <div className="space-y-3 text-center sm:text-left">
-            <p className="uppercase text-xs text-gray-400">1. ÚNETE USANDO CUALQUIER DISPOSITIVO</p>
-            <p className="font-semibold text-white text-md">{joinLink}</p>
-            <p className="uppercase text-xs text-gray-400">2. INTRODUCE EL CÓDIGO DE UNIÓN</p>
-            <p className="text-4xl font-bold tracking-widest">{sessionJoinCode !== null ? sessionJoinCode : 'Cargando...'}</p>
-          </div>
-
-          {/* QR */}
-          <div className="flex flex-col items-center mt-6 sm:mt-0 gap-3">
-            <div onClick={() => setShowQR(true)} className="cursor-pointer">
-              <QRCodeCanvas
-                value={`https://join.myquiz.com/${sessionId}`} // Usar el link de unión
-                size={100}
-                bgColor="#FFFFFF"
-                fgColor="#000000"
-                className="cursor-pointer hover:scale-105 transition"
-                onClick={() => setShowQR(true)}
-              />
-              <p className="text-xs text-center mt-1">Share via QR</p>
-            </div>
-          </div>
+      {/* --- Main Content --- */}
+      <main className="flex-grow flex flex-col items-center justify-center text-center p-4">
+        <div className="mb-8">
+            <p className="text-gray-300 text-lg">Únete en <span className="font-bold text-white">{joinUrl.replace(/^https?:\/\//, '')}</span></p>
+            <p className="text-gray-300 text-lg">con el código de acceso:</p>
+        </div>
+        
+        <div className="text-6xl md:text-8xl font-bold tracking-widest text-white mb-8">
+          {sessionData.joinCode}
         </div>
 
-        {sessionStatus === 'waiting' && (
-          <div className="flex flex-col items-center mt-6">
-            {/* Botón EMPEZAR */}
-            <button
-              onClick={startSession}
-              disabled={participants.length === 0} // Deshabilitar si no hay participantes
-              className={`bg-purple-600 hover:bg-purple-700 text-white w-full max-w-md py-3 rounded-full text-lg font-semibold shadow transition-all
-                ${participants.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`
-              }
-            >
-              EMPEZAR
-            </button>
+        <button onClick={() => setShowQR(true)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-lg transition">
+            <QrCode size={20} />
+            <span>Mostrar QR</span>
+        </button>
+      </main>
 
-            {/* Lista de participantes */}
-            <div className="mt-8 w-full text-center"> {/* Ajustar estilos según sea necesario */}
-               <p className="text-sm text-gray-400 mb-2">
-                 👥 Esperando a los participantes...
-               </p>
-               <div className="flex flex-wrap justify-center gap-2">
-                 {participants.map((p, i) => (
-                   <div key={i} className="bg-purple-700 px-3 py-1 rounded-full text-xs text-white">
-                     {p.name || `Participante ${i + 1}`}
-                   </div>
-                 ))}
-               </div>
-            </div>
+      {/* --- Footer with Participants & Start Button --- */}
+      <footer className="p-4 md:p-6 flex flex-col items-center w-full">
+          <div className="w-full max-w-4xl">
+              <div className="flex items-center gap-2 text-gray-300 mb-3">
+                  <Users size={20}/>
+                  <h2 className="font-semibold">{participants.length} participante(s)</h2>
+              </div>
+              <div className="h-20 w-full bg-black/30 rounded-lg p-2 flex flex-wrap gap-2 items-start overflow-y-auto">
+                  {participants.length === 0 ? (
+                      <span className="text-gray-400 italic p-2">Esperando a que se unan los participantes...</span>
+                  ) : (
+                      participants.map((p, i) => (
+                          <span key={i} className="bg-purple-600 px-3 py-1 rounded-full text-sm font-medium animate-fade-in">
+                              {p.name || `Participante ${i + 1}`}
+                          </span>
+                      ))
+                  )}
+              </div>
           </div>
-        )}
 
+        <button
+          onClick={startSession}
+          disabled={participants.length === 0}
+          className="w-full max-w-4xl mt-4 bg-green-500 hover:bg-green-600 text-white py-4 rounded-lg text-xl font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-600"
+        >
+          EMPEZAR
+        </button>
+      </footer>
 
-         {/* Visualización de preguntas (placeholder) */}
-         {sessionStatus === 'started' && quizQuestions.length > 0 && (
-            <div className="mt-8 text-center">
-                <h3 className="text-2xl font-bold mb-4">¡Quiz Iniciado!</h3>
-                <p>Total de preguntas cargadas: {quizQuestions.length}</p>
-                 {/* Aquí iría la lógica para mostrar la pregunta actual */}
-                 {/* Por ahora, solo confirmamos que se cargaron */}
-            </div>
-         )}
-
-
-      </div>
-
-
-      {/* Modal QR grande */}
+      {/* --- QR Code Modal --- */}
       {showQR && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="relative bg-white p-4 rounded-lg shadow-lg">
-            <button
-              onClick={() => setShowQR(false)}
-              className="absolute top-2 right-2 text-gray-700 hover:text-black text-lg"
-            >
-              ✖
-            </button>
-            <QRCodeCanvas
-              value={`https://join.myquiz.com/${sessionId}`} // Usar el link de unión
-              size={300}
-              bgColor="#FFFFFF"
-              fgColor="#000000"
-            />
-             <p className="text-center text-gray-600 text-sm mt-2">{joinLink}</p> {/* Mostrar link en el modal */}
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowQR(false)}>
+          <div className="bg-white p-6 rounded-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <QRCodeCanvas value={joinUrl} size={256} />
+            <p className="text-center text-black font-bold text-2xl mt-4">{sessionData.joinCode}</p>
+            <p className="text-center text-gray-600 mt-1">{joinUrl}</p>
           </div>
         </div>
       )}

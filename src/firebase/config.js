@@ -1,7 +1,7 @@
 // firebase/config.js
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getDatabase } from 'firebase/database'; // <-- Real-time Database
+import { getDatabase } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -15,8 +15,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const rtdb = getDatabase(app); // ✅ Aquí se obtiene RTDB
+// --- CORRECCIÓN CRÍTICA ---
+// Añadida la inicialización de getFirestore para que la base de datos funcione
+const db = getFirestore(app); 
+const rtdb = getDatabase(app); 
 const auth = getAuth(app);
 
 export { db, rtdb, auth }

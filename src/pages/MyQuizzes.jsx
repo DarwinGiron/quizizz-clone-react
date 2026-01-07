@@ -1,40 +1,38 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import React, { useEffect, useState, useRef } from 'react';
+import { collection, getDocs, deleteDoc, doc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { Link, useNavigate } from 'react-router-dom';
-import { FiMoreVertical, FiEye } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { Plus, MoreVertical, Play, Edit, Copy, Trash2 } from 'lucide-react';
 
 const MyQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
-  const [dropdownOpen, setDropdownOpen] = useState(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [loading, setLoading] = useState(true);
+  const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const fetchQuizzes = async () => {
+      setLoading(true);
       try {
         const querySnapshot = await getDocs(collection(db, 'quizzes'));
-        const fetched = [];
-        querySnapshot.forEach((doc) => {
-          fetched.push({ id: doc.id, ...doc.data() });
-        });
-        setQuizzes(fetched);
+        const fetchedQuizzes = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        setQuizzes(fetchedQuizzes);
       } catch (err) {
         console.error('Error al obtener quizzes', err);
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchQuizzes();
   }, []);
 
-  // Cierra el dropdown si haces clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        !event.target.closest('.dropdown-toggle') &&
-        !event.target.closest('.dropdown-menu')
-      ) {
-        setDropdownOpen(null);
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -42,167 +40,84 @@ const MyQuizzes = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    try {
-      await deleteDoc(doc(db, 'quizzes', id));
-      setQuizzes(quizzes.filter((quiz) => quiz.id !== id));
-    } catch (err) {
-      console.error('Error eliminando quiz:', err);
+    if (window.confirm('¿Estás seguro de que quieres eliminar este quiz?')) {
+      try {
+        await deleteDoc(doc(db, 'quizzes', id));
+        setQuizzes(quizzes.filter(quiz => quiz.id !== id));
+        setOpenDropdown(null);
+      } catch (err) {
+        console.error('Error eliminando quiz:', err);
+      }
     }
   };
 
   const handleDuplicate = async (quiz) => {
     try {
-      const quizCopy = {
-        ...quiz,
-        title: quiz.title + ' (copia)',
-        createdAt: new Date(),
-      };
+      const newTitle = `${quiz.title} (Copia)`;
+      const quizCopy = { ...quiz, title: newTitle, createdAt: new Date() };
       delete quizCopy.id;
       const docRef = await addDoc(collection(db, 'quizzes'), quizCopy);
-      setQuizzes([...quizzes, { id: docRef.id, ...quizCopy }]);
+      setQuizzes([{ id: docRef.id, ...quizCopy }, ...quizzes]);
+      setOpenDropdown(null);
     } catch (err) {
       console.error('Error duplicando quiz:', err);
     }
   };
 
-  const handleEdit = (id) => {
-    navigate(`/edit/${id}`);
-  };
-
-  const toggleDropdown = (event, index) => {
-    const buttonRect = event.currentTarget.getBoundingClientRect();
-    setDropdownPosition({
-      top: buttonRect.bottom + window.scrollY + 4,
-      left: buttonRect.left + window.scrollX - 100,
-    });
-    setDropdownOpen(index);
-  };
-
-  return (
-    <div className="flex justify-center pt-8 min-h-[60vh] p-8 relative">
-      <div className="w-full max-w-6xl">
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={() => navigate('/create')}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-5 rounded-2xl shadow-md transition-all duration-200"
-          >
-            <span className="text-xl leading-none">➕</span>
-            <span className="text-sm sm:text-base">Crear nueva evaluación</span>
-          </button>
+  // --- COMPONENTE QuizCard MEJORADO ---
+  const QuizCard = ({ quiz }) => (
+    <div 
+      onClick={() => navigate(`/quiz/${quiz.id}`)}
+      className="bg-secondary rounded-xl p-5 transition-all duration-300 border border-border flex justify-between items-center hover:border-accent/50 cursor-pointer group"
+    >
+      <div className="flex-grow">
+        <h2 className="text-xl font-bold text-text-primary group-hover:text-accent transition-colors">{quiz.title}</h2>
+        <div className="flex items-center gap-4 text-sm text-text-muted mt-2">
+          <span>{quiz.questions?.length || 0} preguntas</span>
+          <span>·</span>
+          <span>Creado: {quiz.createdAt ? new Date(quiz.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</span>
         </div>
+      </div>
 
-
-        <h1 className="text-2xl font-bold mb-6 text-center">Mis Quizzes</h1>
-
-        {quizzes.length === 0 ? (
-          <p className="text-center">No tienes quizzes aún.</p>
-        ) : (
-          <div className="flex justify-center">
-            <div className="grid grid-cols-1 gap-6 w-full max-w-5xl">
-              {quizzes
-                .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-                .map((quiz, index) => {
-                  const partidasJugadas = Math.floor(Math.random() * 40) + 1;
-                  const personalAsistio = partidasJugadas * (Math.floor(Math.random() * 5) + 1);
-
-                  return (
-                    <div>
-                      <Link
-                        key={quiz.id}
-                        to={`/quiz/${quiz.id}`}
-                        className="block bg-white rounded-lg shadow-md px-6 py-4 transition-transform transform hover:-translate-y-1 hover:shadow-xl w-full"
-                      >
-                        <div className="flex justify-between items-center">
-                          <h2
-                            onClick={(e) => {
-                              e.preventDefault();
-                              navigate(`/quiz/${quiz.id}`);
-                            }}
-                            className="text-lg font-bold text-black cursor-pointer hover:underline"
-                          >
-                            {quiz.title}
-                          </h2>
-
-                          <div className="flex items-center gap-4 relative">
-                            <Link
-                              to={`/preview/${quiz.id}`}
-                              title="Vista previa"
-                              className="text-purple-600 hover:text-purple-800"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <FiEye size={20} />
-                            </Link>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleDropdown(e, index);
-                              }}
-                              className="text-gray-700 hover:text-black dropdown-toggle"
-                            >
-                              <FiMoreVertical size={24} />
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-2 flex flex-wrap items-center gap-x-4">
-                          📋 {quiz.questions?.length || 0} preguntas
-                          🎮 {partidasJugadas} partidas jugadas
-                          👥 {personalAsistio} personas capacitadas
-                        </p>
-                      </Link>
-                    </div>
-                  );
-                })}
-            </div>
+      {/* El evento onClick en este div detiene la propagación al padre */}
+      <div className="flex items-center gap-2 relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => navigate(`/live/${quiz.id}`)} className="p-2 rounded-full hover:bg-tertiary transition-colors" title="Iniciar Sesión en Vivo">
+          <Play size={20} className='text-text-muted'/>
+        </button>
+        <button onClick={() => setOpenDropdown(openDropdown === quiz.id ? null : quiz.id)} className="p-2 rounded-full hover:bg-tertiary transition-colors" title="Más opciones">
+          <MoreVertical size={20} className='text-text-muted'/>
+        </button>
+        {openDropdown === quiz.id && (
+          <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-48 bg-secondary border border-border rounded-lg shadow-xl z-10">
+            <button onClick={() => navigate(`/edit-quiz/${quiz.id}`)} className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover hover:text-text-primary"><Edit size={16}/> Editar</button>
+            <button onClick={() => handleDuplicate(quiz)} className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover hover:text-text-primary"><Copy size={16}/> Duplicar</button>
+            <button onClick={() => handleDelete(quiz.id)} className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"><Trash2 size={16}/> Eliminar</button>
           </div>
         )}
       </div>
+    </div>
+  );
 
-      {/* 🔽 Dropdown flotante visible sobre todo */}
-      {dropdownOpen !== null && (
-        <div
-          className="fixed w-40 bg-white border rounded shadow-lg z-50 dropdown-menu"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-          }}
-        >
-          <button
-            onClick={() => {
-              window.location.href = `/live/${quizzes[dropdownOpen].id}`;
-              setDropdownOpen(null);
-            }}
-            className="w-full text-left px-3 py-2 hover:bg-gray-100"
-          >
-            Sesión en vivo
-          </button>
-          <button
-            onClick={() => {
-              handleEdit(quizzes[dropdownOpen].id);
-              setDropdownOpen(null);
-            }}
-            className="w-full text-left px-3 py-2 hover:bg-gray-100"
-          >
-            Editar
-          </button>
-          <button
-            onClick={() => {
-              handleDuplicate(quizzes[dropdownOpen]);
-              setDropdownOpen(null);
-            }}
-            className="w-full text-left px-3 py-2 hover:bg-gray-100"
-          >
-            Duplicar
-          </button>
-          <button
-            onClick={() => {
-              handleDelete(quizzes[dropdownOpen].id);
-              setDropdownOpen(null);
-            }}
-            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-500"
-          >
-            Eliminar
-          </button>
+  return (
+    <div className="text-text-primary p-6">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Mis Quizzes</h1>
+        <button onClick={() => navigate('/create-quiz')} className="flex items-center gap-2 bg-accent-strong text-accent-text font-bold py-2 px-5 rounded-lg hover:bg-accent transition-colors shadow-lg shadow-accent/20">
+          <Plus size={20}/>
+          Crear Nueva Evaluación
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center text-text-muted">Cargando quizzes...</div>
+      ) : quizzes.length === 0 ? (
+        <div className="text-center py-16 px-8 bg-secondary rounded-xl border border-dashed border-border">
+          <h3 className="text-xl font-semibold text-text-primary">Aún no tienes ningún quiz</h3>
+          <p className="text-text-muted mt-2">Haz clic en "Crear Nueva Evaluación" para empezar.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {quizzes.map(quiz => <QuizCard key={quiz.id} quiz={quiz} />)}
         </div>
       )}
     </div>

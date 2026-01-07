@@ -1,195 +1,199 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { FiEye, FiEdit, FiTarget, FiEyeOff } from 'react-icons/fi';
-import { FaGamepad } from 'react-icons/fa';
-import StartLiveSessionButton from '../components/StartLiveSessionButton';
-import ExportStatsModal from '../components/ExportStatsModal';
+import { CheckCircle, XCircle, Users, Clock, Download } from 'lucide-react';
 
-const QuizDetails = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+const QuizDetail = () => {
+  const { id: quizId } = useParams();
   const [quiz, setQuiz] = useState(null);
-  const [showAnswers, setShowAnswers] = useState(true);
-  const [activeTab, setActiveTab] = useState('questions');
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('questions'); // questions, sessions, reports
 
   useEffect(() => {
-    const fetchQuiz = async () => {
-      const docRef = doc(db, 'quizzes', id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setQuiz({ id: docSnap.id, ...docSnap.data() });
+    const fetchQuizAndSessions = async () => {
+      if (!quizId) return;
+      setLoading(true);
+      try {
+        const quizDoc = await getDoc(doc(db, 'quizzes', quizId));
+        if (quizDoc.exists()) {
+          setQuiz({ id: quizDoc.id, ...quizDoc.data() });
+        } else {
+          throw new Error('La evaluación no fue encontrada.');
+        }
+
+        const sessionsQuery = query(collection(db, 'sessions'), where('quizId', '==', quizId));
+        const sessionsSnapshot = await getDocs(sessionsQuery);
+        setSessions(sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchQuiz();
-  }, [id]);
 
-  const handleExportPDF = () => {
-    console.log('Exportar PDF...');
-    setShowExportModal(false);
+    fetchQuizAndSessions();
+  }, [quizId]);
+
+  const aggregatedReport = useMemo(() => {
+    if (!quiz || sessions.length === 0) {
+      return { totalParticipants: 0, averageScore: 0, questionPerformance: [] };
+    }
+
+    let totalParticipants = 0;
+    let totalPercentageSum = 0;
+    const questionStats = quiz.questions.map(() => ({ correct: 0, total: 0 }));
+    const totalPossiblePoints = quiz.questions.reduce((sum, q) => sum + (q.puntos || 1), 0);
+
+    sessions.forEach(session => {
+      const participants = session.participants || {};
+      Object.values(participants).forEach(p => {
+        totalParticipants++;
+        let userScore = 0;
+        quiz.questions.forEach((q, qIdx) => {
+          const answer = p.answers?.[qIdx];
+          if (answer !== undefined) {
+            questionStats[qIdx].total++;
+            if (answer === q.correctAnswer) {
+              questionStats[qIdx].correct++;
+              userScore += q.puntos || 1;
+            }
+          }
+        });
+        if(totalPossiblePoints > 0) totalPercentageSum += (userScore / totalPossiblePoints) * 100;
+      });
+    });
+
+    const averageScore = totalParticipants > 0 ? totalPercentageSum / totalParticipants : 0;
+    const questionPerformance = quiz.questions.map((q, qIdx) => ({
+      question: q.question,
+      performance: questionStats[qIdx].total > 0 ? (questionStats[qIdx].correct / questionStats[qIdx].total) * 100 : 0,
+    }));
+
+    return { totalParticipants, averageScore, questionPerformance };
+  }, [quiz, sessions]);
+
+  const handleDownloadAggregatedCSV = () => {
+    const headers = ['Pregunta', 'Porcentaje de Acierto (%)'];
+    const rows = aggregatedReport.questionPerformance.map(q => {
+      const escapedQuestion = q.question.replace(/"/g, '""'); // CORRECTO: Escapa comillas dobles para CSV
+      return `"${escapedQuestion}",${q.performance.toFixed(2)}`;
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([ "\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `informe_agregado_${quiz.title.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const handleExportExcel = () => {
-    console.log('Exportar Excel...');
-    setShowExportModal(false);
-  };
-if (!quiz) return <p className="text-center mt-10">Cargando...</p>;
+  const TabButton = ({ tabName, label, count }) => (
+    <button
+      onClick={() => setActiveTab(tabName)}
+      className={`px-4 py-2 font-semibold rounded-t-lg transition-colors duration-200 ${ 
+        activeTab === tabName 
+        ? 'border-b-2 border-accent text-accent' 
+        : 'text-text-muted hover:text-text-primary'
+      }`}>
+      {label} {count !== undefined ? `(${count})` : ''}
+    </button>
+  );
 
-const sessionData = {
-  title: quiz.title || 'Estadísticas del Quiz',
-  date: new Date().toLocaleDateString(),
-  users: [
-    { name: '1044', precision: 100, score: 10410 },
-    { name: '1176', precision: 100, score: 9205 },
-    { name: '1774', precision: 100, score: 10620 },
-    { name: '1840', precision: 100, score: 8920 },
-  ]
-};
+  if (loading) return <div className="text-center p-10 text-text-muted">Cargando detalles...</div>;
+  if (error) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
+  if (!quiz) return null;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Encabezado */}
-      <div className="bg-white rounded shadow p-6 mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">{quiz.title}</h2>
-            <p className="text-sm text-gray-600 mt-1 flex items-center gap-4">
-              <span className="flex items-center gap-1"><FiTarget /> 0% precisión</span>
-              <span className="flex items-center gap-1"><FaGamepad /> 0 jugadas</span>
-            </p>
-          </div>
-          <div className="space-x-2 flex items-center">
-            <button
-              onClick={() => navigate(`/preview/${id}`)}
-              className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              <FiEye /> Vista previa
-            </button>
-            <button
-              onClick={() => navigate(`/edit/${id}`)}
-              className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              <FiEdit /> Continuar editando
-            </button>
-          </div>
-        </div>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 text-text-primary">
+      <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
+      <p className="text-text-muted mb-6">ID: {quiz.id}</p>
 
-        <div className="flex gap-4 mt-6">
-          <StartLiveSessionButton quizId={quiz.id} />
-          <button
-            onClick={() => setShowExportModal(true)}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
-          >
-            📥 Exportar estadísticas
-          </button>
-        </div>
+      <div className="border-b border-border-secondary mb-6">
+        <TabButton tabName="questions" label="Preguntas" count={quiz.questions?.length || 0} />
+        <TabButton tabName="sessions" label="Sesiones" count={sessions.length} />
+        <TabButton tabName="reports" label="Informes" />
       </div>
 
-      {/* Tabs */}
-      <div className="mb-2 border-b flex gap-6 text-purple-600 font-semibold">
-        <button
-          className={`pb-2 ${activeTab === 'questions' ? 'border-b-2 border-purple-600' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('questions')}
-        >
-          Preguntas ({quiz.questions?.length || 0})
-        </button>
-        <button
-          className={`pb-2 ${activeTab === 'sessions' ? 'border-b-2 border-purple-600' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('sessions')}
-        >
-          Sesiones
-        </button>
-        <button
-          className={`pb-2 ${activeTab === 'comments' ? 'border-b-2 border-purple-600' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('comments')}
-        >
-          Comentario
-        </button>
+      <div>
+        {activeTab === 'questions' && (
+          <div className="space-y-6">
+            {quiz.questions.map((q, qIdx) => (
+              <div key={qIdx} className="bg-secondary border border-border rounded-lg p-5">
+                <p className="font-bold text-lg mb-4">{qIdx + 1}. {q.question}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {q.options.map((opt, oIdx) => (
+                    <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-lg border-2 ${q.correctAnswer === oIdx ? 'border-green-500/50 bg-green-500/10' : 'border-transparent'}`}>
+                      {q.correctAnswer === oIdx ? <CheckCircle className="text-green-500" /> : <XCircle className="text-gray-400" />}
+                      <span className="flex-1">{opt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'sessions' && (
+           <div className="space-y-4">
+            {sessions.length > 0 ? (
+              sessions.map(session => (
+                <div key={session.id} className="bg-secondary border border-border rounded-lg p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-bold">Sesión del {new Date(session.startTime.seconds * 1000).toLocaleString()}</p>
+                     <div className="flex items-center gap-4 text-sm text-text-muted mt-1">
+                        <span className="flex items-center gap-1.5"><Users size={14}/> {Object.keys(session.participants || {}).length} Participantes</span>
+                        <span className="flex items-center gap-1.5"><Clock size={14}/> {session.status}</span>
+                    </div>
+                  </div>
+                  <Link to={`/session-report/${session.id}`} className="bg-accent text-accent-text font-bold py-2 px-4 rounded-lg hover:bg-accent-strong transition-colors">
+                    Ver Informe
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-10 px-6 bg-secondary rounded-lg border-dashed border-border">
+                  <h3 className="text-lg font-semibold">No hay sesiones</h3>
+                  <p className="text-text-muted mt-1">Aún no se ha realizado ninguna sesión en vivo con esta evaluación.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'reports' && (
+            <div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+                    <div className="bg-secondary p-4 rounded-lg border border-border"><p className="text-2xl font-bold">{sessions.length}</p><p className="text-sm text-text-muted">Sesiones Totales</p></div>
+                    <div className="bg-secondary p-4 rounded-lg border border-border"><p className="text-2xl font-bold">{aggregatedReport.totalParticipants}</p><p className="text-sm text-text-muted">Participaciones Totales</p></div>
+                    <div className="bg-secondary p-4 rounded-lg border border-border"><p className="text-2xl font-bold">{aggregatedReport.averageScore.toFixed(2)}%</p><p className="text-sm text-text-muted">Nota Promedio General</p></div>
+                </div>
+
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">Rendimiento por Pregunta</h2>
+                    <button onClick={handleDownloadAggregatedCSV} disabled={aggregatedReport.questionPerformance.length === 0} className="flex items-center gap-2 text-sm bg-accent text-accent-text font-bold py-2 px-3 rounded-lg hover:bg-accent-strong transition-colors disabled:opacity-50"><Download size={16}/>Descargar CSV</button>
+                </div>
+                
+                <div className="bg-secondary border border-border rounded-xl p-4 space-y-3">
+                {aggregatedReport.questionPerformance.length > 0 ? aggregatedReport.questionPerformance.map((q, index) => (
+                    <div key={index}>
+                        <div className="flex justify-between items-center mb-1">
+                            <p className="text-sm font-medium text-text-secondary truncate pr-4">{index + 1}. {q.question}</p>
+                            <p className="text-sm font-bold">{q.performance.toFixed(1)}%</p>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-accent h-2.5 rounded-full" style={{ width: `${q.performance}%` }}></div></div>
+                    </div>
+                )) : <p className="text-center text-text-muted py-6">No hay datos suficientes para generar un informe.</p>}
+                </div>
+            </div>
+        )}
       </div>
-
-      {/* Botón ocultar respuestas */}
-      {activeTab === 'questions' && (
-        <div className="flex justify-end sticky top-[112px] z-30 bg-[#f9fafb] py-2">
-          <button
-            onClick={() => setShowAnswers(!showAnswers)}
-            className="flex items-center gap-2 bg-white border px-3 py-2 rounded-full text-sm text-purple-600 shadow hover:bg-gray-50 transition-all"
-          >
-            {showAnswers ? <FiEyeOff /> : <FiEye />}
-            {showAnswers ? 'Ocultar respuestas' : 'Mostrar respuestas'}
-          </button>
-        </div>
-      )}
-
-      {/* Contenido dinámico */}
-      {activeTab === 'questions' && (
-        <div className="space-y-4">
-          {quiz.questions?.map((q, i) => (
-            <div key={i} className="bg-white shadow rounded p-4">
-              <div className="text-sm text-gray-600 mb-1">
-                {i + 1}. Opción múltiple • ⏱ 30 segundos • 🏅 1 punto
-              </div>
-              <p className="font-semibold">{q.question}</p>
-              <ul className="mt-2 grid grid-cols-2 gap-2">
-                {q.options.map((opt, idx) => {
-                  const isCorrect = idx === q.correctAnswer;
-                  let style = 'bg-gray-100 border border-gray-300 text-gray-800';
-                  if (showAnswers) {
-                    style = isCorrect
-                      ? 'bg-green-100 border-green-400 text-green-700'
-                      : 'bg-red-100 border-red-400 text-red-700';
-                  }
-                  return (
-                    <li key={idx} className={`px-3 py-2 rounded ${style}`}>
-                      {opt}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeTab === 'sessions' && (
-        <div className="space-y-4 mt-4">
-          {[1, 2].map((s, i) => (
-            <div
-              key={i}
-              className="bg-white p-4 rounded shadow flex justify-between items-center hover:bg-gray-50 transition cursor-pointer"
-              onClick={() => navigate(`/sessions/session${s}`)}
-            >
-              <div>
-                <h4 className="font-semibold">Capacitación #{s}</h4>
-                <p className="text-sm text-gray-500">🎯 Precisión 92% • 👥 10 participantes</p>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/sessions/session${s}/report`);
-                }}
-                className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 text-sm"
-              >
-                Ver informe
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeTab === 'comments' && (
-        <div className="bg-white p-4 rounded shadow text-gray-500">Sección de comentarios próximamente...</div>
-      )}
-
-      {showExportModal && (
-        <ExportStatsModal
-          onClose={() => setShowExportModal(false)}
-          sessionData={sessionData}
-        />
-      )}
     </div>
   );
 };
 
-export default QuizDetails;
+export default QuizDetail;
