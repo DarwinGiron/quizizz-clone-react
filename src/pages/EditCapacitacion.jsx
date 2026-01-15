@@ -1,202 +1,130 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { eachDayOfInterval, format, parseISO } from 'date-fns';
+import CapacitacionForm from '../components/CapacitacionForm';
 
 const EditCapacitacion = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(false);
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [originalData, setOriginalData] = useState(null);
+    const [form, setForm] = useState({
+        titulo: '', descripcion: '', salon: '',
+        fecha_inicio: '', fecha_fin: '', hora_inicio: '', hora_fin: '', cupoPorBloque: 10
+    });
 
-  useEffect(() => {
-    const fetchCapacitacion = async () => {
-      const ref = doc(db, 'capacitaciones', id);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        setForm(snap.data());
-      } else {
-        alert('Capacitación no encontrada');
-        navigate('/capacitaciones');
-      }
+    const fetchCapacitacion = useCallback(async () => {
+        setLoading(true);
+        const docRef = doc(db, 'capacitaciones', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            setForm(data);
+            setOriginalData(data);
+        } else {
+            alert("No se encontró la capacitación.");
+            navigate('/capacitaciones');
+        }
+        setLoading(false);
+    }, [id, navigate]);
+
+    useEffect(() => {
+        fetchCapacitacion();
+    }, [fetchCapacitacion]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!originalData) return; // Evitar ejecución si los datos originales no se han cargado
+        setLoading(true);
+
+        const fechaFin = form.fecha_fin || form.fecha_inicio;
+
+        try {
+            const batch = writeBatch(db);
+
+            // Verificar si la programación o el cupo han cambiado para regenerar bloques
+            const programacionCambiada = 
+                originalData.fecha_inicio !== form.fecha_inicio ||
+                (originalData.fecha_fin || originalData.fecha_inicio) !== fechaFin ||
+                originalData.hora_inicio !== form.hora_inicio ||
+                originalData.hora_fin !== form.hora_fin ||
+                originalData.salon !== form.salon ||
+                Number(originalData.cupoPorBloque) !== Number(form.cupoPorBloque);
+
+            if (programacionCambiada) {
+                // 1. Borrar bloques antiguos asociados a esta capacitación
+                const bloquesQuery = query(collection(db, 'capacitacion_bloques'), where('capacitacion_id', '==', id));
+                const bloquesSnap = await getDocs(bloquesQuery);
+                bloquesSnap.forEach(doc => batch.delete(doc.ref));
+
+                // 2. Generar y validar nuevos bloques con la información actualizada
+                const dias = eachDayOfInterval({ start: parseISO(form.fecha_inicio), end: parseISO(fechaFin) });
+                dias.forEach(dia => {
+                    const nuevoBloqueRef = doc(collection(db, 'capacitacion_bloques'));
+                    batch.set(nuevoBloqueRef, { 
+                        capacitacion_id: id, 
+                        fecha: format(dia, 'yyyy-MM-dd'),
+                        hora_inicio: form.hora_inicio,
+                        hora_fin: form.hora_fin,
+                        salon: form.salon,
+                        cupo_disponible: Number(form.cupoPorBloque), 
+                        participantes: [] 
+                    });
+                });
+            }
+
+            // 3. Actualizar el documento principal de la capacitación
+            const capacitacionRef = doc(db, 'capacitaciones', id);
+            batch.update(capacitacionRef, { ...form, fecha_fin: fechaFin });
+
+            // 4. Ejecutar todas las operaciones en la base de datos
+            await batch.commit();
+            navigate(`/capacitacion/${id}`);
+
+        } catch (error) {
+            console.error("Error al actualizar la capacitación: ", error);
+            alert("Hubo un error al actualizar. Revisa la consola.");
+        } finally {
+            setLoading(false);
+        }
     };
-    fetchCapacitacion();
-  }, [id, navigate]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
-  };
+    const handleDelete = async () => {
+        if (!window.confirm("¿Estás seguro? Se borrará la capacitación y todos sus horarios.")) return;
+        setLoading(true);
+        try {
+            const batch = writeBatch(db);
+            const bloquesQuery = query(collection(db, 'capacitacion_bloques'), where('capacitacion_id', '==', id));
+            const bloquesSnap = await getDocs(bloquesQuery);
+            bloquesSnap.forEach(doc => batch.delete(doc.ref));
+            const capacitacionRef = doc(db, 'capacitaciones', id);
+            batch.delete(capacitacionRef);
+            await batch.commit();
+            navigate('/capacitaciones');
+        } catch (error) {
+            console.error("Error al eliminar: ", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    if (loading || !form) return;
-    setLoading(true);
+    if (!form.titulo) return <p className="p-6 text-center">Cargando...</p>;
 
-    try {
-      const ref = doc(db, 'capacitaciones', id);
-      await updateDoc(ref, form);
-      alert('✅ Capacitación actualizada correctamente');
-      navigate('/capacitaciones');
-    } catch (error) {
-      console.error(error);
-      alert('❌ Error al actualizar');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta capacitación y todos sus bloques?')) return;
-
-    setLoading(true);
-    try {
-      // Eliminar bloques asociados
-      const bloquesRef = collection(db, 'capacitacion_bloques');
-      const q = query(bloquesRef, where('capacitacion_id', '==', id));
-      const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map((docu) => deleteDoc(docu.ref));
-      await Promise.all(deletePromises);
-
-      // Eliminar capacitación
-      await deleteDoc(doc(db, 'capacitaciones', id));
-
-      alert('🗑️ Capacitación eliminada');
-      navigate('/capacitaciones');
-    } catch (error) {
-      console.error(error);
-      alert('❌ Error al eliminar');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!form) return <div className="p-6">Cargando datos...</div>;
-
-  return (
-    <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Editar Capacitación</h2>
-      <form onSubmit={handleUpdate} className="space-y-4">
-        <input
-          name="titulo"
-          value={form.titulo}
-          placeholder="Título"
-          className="w-full p-2 border rounded"
-          onChange={handleChange}
-        />
-        <textarea
-          name="descripcion"
-          value={form.descripcion}
-          placeholder="Descripción"
-          className="w-full p-2 border rounded"
-          onChange={handleChange}
-        />
-
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label>Fecha Inicio</label>
-            <input
-              type="date"
-              name="fecha_inicio"
-              value={form.fecha_inicio}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
+    return (
+        <div className="p-6">
+            <h1 className="text-2xl font-bold text-text-primary mb-5">Editar Capacitación</h1>
+            <CapacitacionForm 
+                form={form} 
+                setForm={setForm} 
+                handleSubmit={handleSubmit} 
+                handleDelete={handleDelete}
+                loading={loading} 
+                mode='edit' 
             />
-          </div>
-          <div className="flex-1">
-            <label>Fecha Fin</label>
-            <input
-              type="date"
-              name="fecha_fin"
-              value={form.fecha_fin}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
-          </div>
         </div>
-
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label>Duración por bloque</label>
-            <select
-              name="duracion_bloque"
-              value={form.duracion_bloque}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            >
-              <option value={30}>30 minutos</option>
-              <option value={60}>60 minutos</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label>Cupo por bloque</label>
-            <input
-              name="cupo_bloque"
-              type="number"
-              value={form.cupo_bloque}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label>Hora inicio del día</label>
-            <input
-              type="time"
-              name="hora_inicio_dia"
-              value={form.hora_inicio_dia}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
-          </div>
-          <div className="flex-1">
-            <label>Hora fin del día</label>
-            <input
-              type="time"
-              name="hora_fin_dia"
-              value={form.hora_fin_dia}
-              className="w-full p-2 border rounded"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="descanso_medio_dia"
-            checked={form.descanso_medio_dia}
-            onChange={handleChange}
-          />
-          Omitir horario de 12:00 a 14:00
-        </label>
-
-        <div className="flex gap-4 mt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className={`px-6 py-2 rounded text-white ${
-              loading
-                ? 'bg-purple-400 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-700'
-            }`}
-          >
-            {loading ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
-          >
-            Eliminar Capacitación
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+    );
 };
 
 export default EditCapacitacion;

@@ -1,106 +1,163 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { collection, getDocs, deleteDoc, doc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, Play, Edit, Copy, Trash2 } from 'lucide-react';
+import { Plus, MoreVertical, Play, Edit, Copy, Trash2, Clock, ListFilter } from 'lucide-react';
 
 const MyQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all');
   const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    const fetchQuizzes = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const querySnapshot = await getDocs(collection(db, 'quizzes'));
-        const fetchedQuizzes = querySnapshot.docs
+        const [quizzesSnapshot, sessionsSnapshot] = await Promise.all([
+          getDocs(collection(db, 'quizzes')),
+          getDocs(collection(db, 'sessions'))
+        ]);
+        
+        const fetchedQuizzes = quizzesSnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        
+        const fetchedSessions = sessionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
         setQuizzes(fetchedQuizzes);
+        setSessions(fetchedSessions);
+
       } catch (err) {
-        console.error('Error al obtener quizzes', err);
+        console.error('Error al obtener datos', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchQuizzes();
+    fetchData();
   }, []);
-
+  
+  // Efecto para cerrar el dropdown si se hace clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenDropdown(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
+
+
+  const filteredQuizzes = useMemo(() => {
+    if (activeFilter === 'all') return quizzes;
+    return quizzes.filter(quiz => {
+      const quizSessions = sessions.filter(s => s.quizId === quiz.id);
+      if (activeFilter === 'todo') return quizSessions.length === 0;
+      if (activeFilter === 'active') return quizSessions.some(s => s.status === 'waiting' || s.status === 'in-progress');
+      if (activeFilter === 'finished') return quizSessions.length > 0 && quizSessions.every(s => s.status === 'finished');
+      return false;
+    });
+  }, [quizzes, sessions, activeFilter]);
 
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este quiz?')) {
       try {
         await deleteDoc(doc(db, 'quizzes', id));
-        setQuizzes(quizzes.filter(quiz => quiz.id !== id));
+        setQuizzes(quizzes.filter(q => q.id !== id));
         setOpenDropdown(null);
-      } catch (err) {
-        console.error('Error eliminando quiz:', err);
+      } catch (error) {
+        console.error("Error deleting quiz: ", error);
       }
     }
   };
 
-  const handleDuplicate = async (quiz) => {
+  const handleDuplicate = async (quizToDuplicate) => {
+    const { id, ...quizData } = quizToDuplicate;
+    const newQuizData = {
+      ...quizData,
+      title: `${quizData.title} (Copia)`,
+      createdAt: new Date(),
+    };
     try {
-      const newTitle = `${quiz.title} (Copia)`;
-      const quizCopy = { ...quiz, title: newTitle, createdAt: new Date() };
-      delete quizCopy.id;
-      const docRef = await addDoc(collection(db, 'quizzes'), quizCopy);
-      setQuizzes([{ id: docRef.id, ...quizCopy }, ...quizzes]);
+      const docRef = await addDoc(collection(db, 'quizzes'), newQuizData);
+      setQuizzes([{ id: docRef.id, ...newQuizData }, ...quizzes]);
       setOpenDropdown(null);
-    } catch (err) {
-      console.error('Error duplicando quiz:', err);
+    } catch (error) {
+      console.error("Error duplicating quiz: ", error);
     }
   };
 
-  // --- COMPONENTE QuizCard MEJORADO ---
-  const QuizCard = ({ quiz }) => (
-    <div 
-      onClick={() => navigate(`/quiz/${quiz.id}`)}
-      className="bg-secondary rounded-xl p-5 transition-all duration-300 border border-border flex justify-between items-center hover:border-accent/50 cursor-pointer group"
-    >
-      <div className="flex-grow">
-        <h2 className="text-xl font-bold text-text-primary group-hover:text-accent transition-colors">{quiz.title}</h2>
-        <div className="flex items-center gap-4 text-sm text-text-muted mt-2">
-          <span>{quiz.questions?.length || 0} preguntas</span>
-          <span>·</span>
-          <span>Creado: {quiz.createdAt ? new Date(quiz.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</span>
+  const FilterButton = ({ filter, label }) => (
+    <button 
+      onClick={() => setActiveFilter(filter)}
+      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeFilter === filter ? 'bg-accent text-accent-text' : 'bg-secondary hover:bg-hover'}`}>
+        {label}
+    </button>
+  );
+  
+  const QuizCard = ({ quiz }) => {
+    const quizSessions = sessions.filter(s => s.quizId === quiz.id);
+    const sessionCount = quizSessions.length;
+    
+    let status = 'todo';
+    if (quizSessions.length > 0) {
+      status = quizSessions.some(s => s.status === 'waiting' || s.status === 'in-progress') ? 'active' : 'finished';
+    }
+    const statusConfig = {
+      todo: { color: 'bg-gray-400' },
+      active: { color: 'bg-green-500' },
+      finished: { color: 'bg-blue-500' },
+    };
+
+    return (
+      <div className="bg-secondary p-4 rounded-xl border border-border-secondary shadow-sm flex items-center justify-between transition-all hover:border-border">
+        <div className="flex items-center gap-4">
+          <div className={`w-2 h-16 rounded-full ${statusConfig[status].color}`}></div>
+          <div>
+            <h3 className="text-lg font-bold text-text-primary">{quiz.title}</h3>
+            <p className="text-sm text-text-muted">{quiz.questions?.length || 0} Preguntas • {sessionCount} Sesiones</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate(`/quiz/${quiz.id}`)}
+            className="flex items-center gap-2 bg-accent text-accent-text font-semibold py-2 px-4 rounded-lg hover:bg-accent-strong transition-colors">
+            <Play size={18} />
+            <span>Iniciar</span>
+          </button>
+          <div className="relative" ref={openDropdown === quiz.id ? dropdownRef : null}>
+            <button onClick={() => setOpenDropdown(openDropdown === quiz.id ? null : quiz.id)} className="p-2 rounded-full hover:bg-hover">
+              <MoreVertical size={20} />
+            </button>
+            {openDropdown === quiz.id && (
+              <div className="absolute right-0 mt-2 w-48 bg-primary border border-border-secondary rounded-lg shadow-xl z-10">
+                <button onClick={() => navigate(`/edit-quiz/${quiz.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-hover">
+                  <Edit size={16} />
+                  Editar
+                </button>
+                <button onClick={() => handleDuplicate(quiz)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-hover">
+                  <Copy size={16} />
+                  Duplicar
+                </button>
+                <button onClick={() => handleDelete(quiz.id)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-hover">
+                  <Trash2 size={16} />
+                  Eliminar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* El evento onClick en este div detiene la propagación al padre */}
-      <div className="flex items-center gap-2 relative" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => navigate(`/live/${quiz.id}`)} className="p-2 rounded-full hover:bg-tertiary transition-colors" title="Iniciar Sesión en Vivo">
-          <Play size={20} className='text-text-muted'/>
-        </button>
-        <button onClick={() => setOpenDropdown(openDropdown === quiz.id ? null : quiz.id)} className="p-2 rounded-full hover:bg-tertiary transition-colors" title="Más opciones">
-          <MoreVertical size={20} className='text-text-muted'/>
-        </button>
-        {openDropdown === quiz.id && (
-          <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-48 bg-secondary border border-border rounded-lg shadow-xl z-10">
-            <button onClick={() => navigate(`/edit-quiz/${quiz.id}`)} className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover hover:text-text-primary"><Edit size={16}/> Editar</button>
-            <button onClick={() => handleDuplicate(quiz)} className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover hover:text-text-primary"><Copy size={16}/> Duplicar</button>
-            <button onClick={() => handleDelete(quiz.id)} className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"><Trash2 size={16}/> Eliminar</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="text-text-primary p-6">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Mis Quizzes</h1>
         <button onClick={() => navigate('/create-quiz')} className="flex items-center gap-2 bg-accent-strong text-accent-text font-bold py-2 px-5 rounded-lg hover:bg-accent transition-colors shadow-lg shadow-accent/20">
           <Plus size={20}/>
@@ -108,16 +165,24 @@ const MyQuizzes = () => {
         </button>
       </div>
 
+      <div className="flex items-center gap-2 mb-6 p-2 bg-primary rounded-full border border-border-secondary w-fit">
+        <FilterButton filter="all" label="Todos" />
+        <FilterButton filter="todo" label="Por ejecutar" />
+        <FilterButton filter="active" label="Ejecutando" />
+        <FilterButton filter="finished" label="Finalizados" />
+      </div>
+
       {loading ? (
-        <div className="text-center text-text-muted">Cargando quizzes...</div>
-      ) : quizzes.length === 0 ? (
-        <div className="text-center py-16 px-8 bg-secondary rounded-xl border border-dashed border-border">
-          <h3 className="text-xl font-semibold text-text-primary">Aún no tienes ningún quiz</h3>
-          <p className="text-text-muted mt-2">Haz clic en "Crear Nueva Evaluación" para empezar.</p>
-        </div>
+        <div className="text-center text-text-muted py-10">Cargando quizzes...</div>
       ) : (
         <div className="space-y-4">
-          {quizzes.map(quiz => <QuizCard key={quiz.id} quiz={quiz} />)}
+          {filteredQuizzes.length > 0 ? 
+            filteredQuizzes.map(quiz => <QuizCard key={quiz.id} quiz={quiz} />) :
+            <div className="text-center py-16 px-8 bg-secondary rounded-xl border border-dashed border-border">
+               <h3 className="text-xl font-semibold text-text-primary">No hay quizzes con este filtro</h3>
+               <p className="text-text-muted mt-2">Prueba a seleccionar otra opción o crea una nueva evaluación.</p>
+            </div>
+          }
         </div>
       )}
     </div>

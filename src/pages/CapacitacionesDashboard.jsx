@@ -1,76 +1,80 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useNavigate, Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { Plus, MapPin, Calendar } from 'lucide-react';
 
 const CapacitacionesDashboard = () => {
-  const [capacitaciones, setCapacitaciones] = useState([]);
-  const navigate = useNavigate();
+    const navigate = useNavigate();
+    const [capacitaciones, setCapacitaciones] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCapacitaciones = async () => {
-      const snapshot = await getDocs(collection(db, 'capacitaciones'));
-      const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCapacitaciones(lista);
-    };
+    useEffect(() => {
+        const fetchCapacitaciones = async () => {
+            setLoading(true);
+            try {
+                const snapshot = await getDocs(collection(db, 'capacitaciones'));
+                const fetchedCapacitaciones = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                setCapacitaciones(fetchedCapacitaciones);
+            } catch (error) {
+                console.error("Error al obtener las capacitaciones: ", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCapacitaciones();
+    }, []);
 
-    fetchCapacitaciones();
-  }, []);
-
-  return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Capacitaciones</h1>
-        <Link to="/capacitaciones/nueva">
-          <button className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-            + Nueva Capacitación
-          </button>
-        </Link>
-      </div>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {capacitaciones.length > 0 ? (
-          capacitaciones.map((cap) => (
-            <div
-              key={cap.id}
-              onClick={() => navigate(`/capacitaciones/${cap.id}/detalle`)}
-              className="bg-white rounded-2xl shadow-md p-5 border hover:shadow-xl transition-all cursor-pointer group relative"
-            >
-              <h2 className="text-xl font-bold mb-2 group-hover:text-purple-700">{cap.titulo}</h2>
-              <p className="text-sm text-gray-600 mb-1">{cap.descripcion}</p>
-              <p className="text-sm">
-                📅 <strong>{format(new Date(cap.fecha_inicio), 'dd MMM yyyy')}</strong> a{' '}
-                <strong>{format(new Date(cap.fecha_fin), 'dd MMM yyyy')}</strong>
-              </p>
-              <p className="text-sm">
-                ⏱️ Bloques de <strong>{cap.duracion_bloque} min</strong> | 👥{' '}
-                <strong>{cap.cupo_bloque} cupos</strong>
-              </p>
-              <p className="text-sm text-gray-500">
-                {cap.descanso_medio_dia
-                  ? '🕛 Con descanso de 12:00 a 14:00'
-                  : '🔁 Jornada completa'}
-              </p>
-              {/* Botón para editar que no propaga el click */}
-              <div className="mt-4 flex justify-end">
-                <Link
-                  to={`/capacitaciones/${cap.id}/edit`}
-                  onClick={(e) => e.stopPropagation()} // Previene navegación al detalle
-                >
-                  <button className="text-purple-600 font-semibold hover:underline">
-                    Editar
-                  </button>
-                </Link>
-              </div>
+    const CapacitacionCard = ({ cap }) => (
+        <div 
+            onClick={() => navigate(`/capacitacion/${cap.id}`)}
+            className="bg-secondary rounded-xl border border-border-secondary shadow-sm transition-all p-4 cursor-pointer hover:bg-hover hover:border-accent"
+        >
+            <h3 className="text-md font-bold text-text-primary truncate mb-2">{cap.titulo}</h3>
+            <p className="text-xs text-text-muted mb-3 h-9 overflow-hidden">{cap.descripcion || "Sin descripción."}</p>
+            <div className="flex flex-col gap-1.5 text-xs text-text-muted pt-2 border-t border-border">
+                <div className="flex items-center gap-2">
+                    <MapPin size={12} />
+                    <span>{cap.salon}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Calendar size={12} />
+                    <span>{cap.fecha_inicio} al {cap.fecha_fin || cap.fecha_inicio}</span>
+                </div>
             </div>
-          ))
-        ) : (
-          <p className="text-gray-500">No hay capacitaciones registradas.</p>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
+
+    return (
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-text-primary">Gestor de Capacitaciones</h1>
+                <button 
+                    onClick={() => navigate('/crear-capacitacion')} 
+                    className="flex items-center gap-2 bg-accent-strong text-accent-text font-bold py-2 px-4 rounded-lg hover:bg-accent transition-colors shadow-lg shadow-accent/20 text-sm">
+                    <Plus size={18}/>
+                    Crear
+                </button>
+            </div>
+            
+            {loading ? (
+                <p className="text-center text-text-muted">Cargando...</p>
+            ) : capacitaciones.length === 0 ? (
+                <div className="text-center py-12 px-6 bg-secondary rounded-xl border border-dashed border-border">
+                    <h3 className="text-lg font-semibold text-text-primary">No hay capacitaciones</h3>
+                    <p className="text-text-muted mt-2 text-sm">Usa el botón "Crear" para añadir la primera.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {capacitaciones.map(cap => (
+                        <CapacitacionCard key={cap.id} cap={cap} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default CapacitacionesDashboard;

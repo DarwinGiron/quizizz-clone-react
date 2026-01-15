@@ -1,93 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Briefcase, Clock, Users, ArrowRight } from 'lucide-react';
 
 const Asignaciones = () => {
   const [capacitaciones, setCapacitaciones] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCapacitaciones = async () => {
       setLoading(true);
       try {
-        const querySnapshot = await getDocs(collection(db, 'capacitaciones'));
-        const caps = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setCapacitaciones(caps);
+        const snapshot = await getDocs(collection(db, 'capacitaciones'));
+        const fetchedCapacitaciones = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCapacitaciones(fetchedCapacitaciones);
       } catch (error) {
-        console.error("Error al obtener capacitaciones: ", error);
+        console.error("Error al obtener las capacitaciones: ", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+
     fetchCapacitaciones();
   }, []);
 
-  // --- CORRECCIÓN ---
-  // Se añade una guarda (|| '') para evitar el crash si una capacitación no tiene nombre.
-  const filteredCapacitaciones = capacitaciones.filter(c =>
-    (c.nombre || '').toLowerCase().includes(searchTerm.toLowerCase())
+  // Navega a la página de asignación detallada para una capacitación específica
+  const handleAssignClick = (capacitacionId) => {
+    navigate(`/asignaciones/detalle/${capacitacionId}`);
+  };
+
+  const CapacitacionCard = ({ cap }) => (
+    <div className="bg-secondary p-5 rounded-xl border border-border-secondary shadow-sm transition-all hover:border-border hover:shadow-md">
+      <h3 className="text-lg font-bold text-text-primary truncate mb-2">{cap.titulo}</h3>
+      <p className="text-sm text-text-muted mb-4 h-10 overflow-hidden">{cap.descripcion}</p>
+      <div className="flex items-center text-xs text-text-muted gap-4 mb-4">
+          <div className="flex items-center gap-1.5">
+              <Briefcase size={14} />
+              <span>{cap.ponente}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+              <Clock size={14} />
+              <span>{cap.duracion}</span>
+          </div>
+      </div>
+      <button 
+        onClick={() => handleAssignClick(cap.id)}
+        className="w-full flex justify-center items-center gap-2 bg-accent text-accent-text font-semibold py-2 px-4 rounded-lg hover:bg-accent-strong transition-colors">
+        <span>Asignar Participantes</span>
+        <ArrowRight size={18} />
+      </button>
+    </div>
   );
 
   return (
-    <div className="p-6 text-text-primary">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Asignación de Capacitaciones</h1>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-text-primary">Panel de Asignaciones</h1>
+        {/* Podríamos agregar un botón para crear capacitaciones si es rol admin */}
       </div>
 
-      <div className="bg-secondary p-6 rounded-xl border border-border">
-        <div className="flex justify-between mb-4">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={20}/>
-            <input
-              type="text"
-              placeholder="Buscar capacitación por nombre..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-primary border text-text-primary border-border focus:ring-2 focus:ring-accent focus:outline-none"
-            />
-          </div>
+      {loading ? (
+        <p className="text-center text-text-muted">Cargando capacitaciones...</p>
+      ) : capacitaciones.length === 0 ? (
+        <div className="text-center py-16 px-8 bg-secondary rounded-xl border border-dashed border-border">
+            <h3 className="text-xl font-semibold text-text-primary">No hay capacitaciones creadas</h3>
+            <p className="text-text-muted mt-2">Crea una nueva capacitación para poder asignar participantes.</p>
         </div>
-
-        {loading ? (
-          <div className="text-center py-10 text-text-muted">Cargando...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-border-secondary">
-                  <th className="p-4 text-sm font-semibold text-text-muted uppercase">Nombre Capacitación</th>
-                  <th className="p-4 text-sm font-semibold text-text-muted uppercase">Descripción</th>
-                  <th className="p-4 text-sm font-semibold text-text-muted uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCapacitaciones.map(cap => (
-                  <tr key={cap.id} className="border-b border-border last:border-0 hover:bg-hover">
-                    <td className="p-4 font-medium text-text-primary">{cap.nombre || 'Sin nombre'}</td>
-                    <td className="p-4 text-text-secondary max-w-sm truncate">{cap.descripcion}</td>
-                    <td className="p-4">
-                      <Link 
-                        to={`/asignaciones/avanzada/${cap.id}`}
-                        className="bg-accent text-accent-text font-bold py-2 px-4 rounded-lg hover:bg-accent-strong transition-colors text-sm"
-                      >
-                        Gestionar Asignación
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {filteredCapacitaciones.length === 0 && !loading && (
-          <div className="text-center py-10 text-text-muted">
-            <p>No se encontraron capacitaciones que coincidan con la búsqueda.</p>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {capacitaciones.map(cap => (
+            <CapacitacionCard key={cap.id} cap={cap} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
