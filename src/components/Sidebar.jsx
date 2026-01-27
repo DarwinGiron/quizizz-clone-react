@@ -13,7 +13,7 @@ const NavItem = ({ to, icon, children }) => (
 
 const Sidebar = () => {
   return (
-    <div className="w-64 bg-primary border-r border-border-secondary p-4 flex flex-col">
+    <div className="fixed top-0 left-0 h-full w-64 bg-primary border-r border-border-secondary p-4 flex flex-col z-10">
         <div className="mb-8">
             <h1 className="text-2xl font-bold text-text-primary">W.</h1>
         </div>

@@ -1,15 +1,18 @@
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 
-
-
 const MainLayout = ({ children }) => {
   return (
-    <div className="flex">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 ml-60 p-6"> 
+      {/* 
+        Ahora que el Sidebar es `fixed`, está fuera del flujo normal.
+        El contenido principal necesita un margen a la izquierda (`ml-64`) 
+        que sea igual al ancho del Sidebar para evitar que se solape.
+      */}
+      <main className="ml-64 p-8">
         {children}
-      </div>
+      </main>
     </div>
   );
 };

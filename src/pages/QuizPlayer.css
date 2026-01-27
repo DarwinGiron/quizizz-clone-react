@@ -1,0 +1,99 @@
+.quiz-player-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f9fafb; /* gray-50 */
+    color: #1f2937; /* gray-800 */
+    font-family: 'Inter', sans-serif;
+}
+
+.question-header {
+    background-color: white;
+    padding: 2rem;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb; /* gray-200 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.question-header p {
+    font-size: 1.5rem; /* text-2xl */
+    font-weight: 600; /* font-semibold */
+}
+
+.answers-grid {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.answer-button {
+    border: none;
+    color: white;
+    font-size: 1.5rem; /* text-2xl */
+    font-weight: bold;
+    border-radius: 0.5rem; /* rounded-lg */
+    cursor: pointer;
+    transition: transform 0.1s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem;
+}
+
+.answer-button:hover:not(:disabled) {
+    transform: scale(1.02);
+}
+
+.answer-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Formas y colores */
+.shape-0 { background-color: #ef4444; } /* red-500 */
+.shape-1 { background-color: #3b82f6; } /* blue-500 */
+.shape-2 { background-color: #facc15; } /* yellow-400 */
+.shape-3 { background-color: #22c55e; } /* green-500 */
+
+
+.submission-feedback {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.25rem; /* text-xl */
+    font-style: italic;
+}
+
+/* Estados de Carga, Error y Espera */
+.player-loading, .player-error, .player-waiting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+.player-loading {
+    background-color: #4f46e5; /* indigo-600 */
+}
+
+.player-error {
+    background-color: #fecaca; /* red-100 */
+    color: #b91c1c; /* red-700 */
+}
+
+.player-waiting {
+    background: linear-gradient(135deg, #6d28d9, #4f46e5);
+}
+
+.player-waiting h2 {
+    font-size: 2.5rem; /* text-4xl */
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
