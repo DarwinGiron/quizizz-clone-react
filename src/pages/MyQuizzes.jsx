@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { collection, getDocs, deleteDoc, doc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, Play, Edit, Copy, Trash2, Clock, ListFilter } from 'lucide-react';
+import { Plus, MoreVertical, Edit, Copy, Trash2 } from 'lucide-react';
 
 const MyQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -11,7 +11,7 @@ const MyQuizzes = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
-  const dropdownRef = useRef(null);
+  const dropdownsRef = useRef({}); // Usar un objeto para referencias
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,13 +43,13 @@ const MyQuizzes = () => {
   // Efecto para cerrar el dropdown si se hace clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (openDropdown && dropdownsRef.current[openDropdown] && !dropdownsRef.current[openDropdown].contains(event.target)) {
         setOpenDropdown(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [dropdownRef]);
+  }, [openDropdown]);
 
 
   const filteredQuizzes = useMemo(() => {
@@ -62,6 +62,11 @@ const MyQuizzes = () => {
       return false;
     });
   }, [quizzes, sessions, activeFilter]);
+
+  const handleDropdownAction = (e, action) => {
+    e.stopPropagation(); // Prevenir que el clic se propague a la tarjeta
+    action();
+  };
 
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este quiz?')) {
@@ -114,36 +119,32 @@ const MyQuizzes = () => {
     };
 
     return (
-      <div className="bg-secondary p-4 rounded-xl border border-border-secondary shadow-sm flex items-center justify-between transition-all hover:border-border">
-        <div className="flex items-center gap-4">
+      <div 
+        onClick={() => navigate(`/quiz/${quiz.id}`)}
+        className="bg-secondary p-4 rounded-xl border border-border-secondary shadow-sm flex items-center justify-between transition-all hover:border-border-strong hover:shadow-md cursor-pointer">
+        <div className="flex items-center gap-4 flex-grow">
           <div className={`w-2 h-16 rounded-full ${statusConfig[status].color}`}></div>
           <div>
             <h3 className="text-lg font-bold text-text-primary">{quiz.title}</h3>
             <p className="text-sm text-text-muted">{quiz.questions?.length || 0} Preguntas • {sessionCount} Sesiones</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => navigate(`/quiz/${quiz.id}`)}
-            className="flex items-center gap-2 bg-accent text-accent-text font-semibold py-2 px-4 rounded-lg hover:bg-accent-strong transition-colors">
-            <Play size={18} />
-            <span>Iniciar</span>
-          </button>
-          <div className="relative" ref={openDropdown === quiz.id ? dropdownRef : null}>
-            <button onClick={() => setOpenDropdown(openDropdown === quiz.id ? null : quiz.id)} className="p-2 rounded-full hover:bg-hover">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="relative" ref={el => dropdownsRef.current[quiz.id] = el}>
+            <button onClick={(e) => handleDropdownAction(e, () => setOpenDropdown(openDropdown === quiz.id ? null : quiz.id))} className="p-2 rounded-full hover:bg-hover">
               <MoreVertical size={20} />
             </button>
             {openDropdown === quiz.id && (
               <div className="absolute right-0 mt-2 w-48 bg-primary border border-border-secondary rounded-lg shadow-xl z-10">
-                <button onClick={() => navigate(`/edit-quiz/${quiz.id}`)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-hover">
+                <button onClick={(e) => handleDropdownAction(e, () => navigate(`/edit-quiz/${quiz.id}`))} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-hover">
                   <Edit size={16} />
                   Editar
                 </button>
-                <button onClick={() => handleDuplicate(quiz)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-hover">
+                <button onClick={(e) => handleDropdownAction(e, () => handleDuplicate(quiz))} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-hover">
                   <Copy size={16} />
                   Duplicar
                 </button>
-                <button onClick={() => handleDelete(quiz.id)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-hover">
+                <button onClick={(e) => handleDropdownAction(e, () => handleDelete(quiz.id))} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-hover">
                   <Trash2 size={16} />
                   Eliminar
                 </button>
