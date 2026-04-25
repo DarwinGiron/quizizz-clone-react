@@ -102,7 +102,7 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
       case 'casi-lleno': return '🟠 Casi lleno';
       case 'medio': return '🟡 Medio lleno';
       case 'con-asignados': return '🔵 Con asignados';
-      case 'vacio': return '🟢 Disponible';
+      case 'vacio': return 'Disponible';
       default: return '⚪ Desconocido';
     }
   };

@@ -242,7 +242,7 @@ const sessionData = {
               disabled={loadingSessions}
               className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm disabled:opacity-50"
             >
-              {loadingSessions ? 'Cargando...' : '🔄 Actualizar'}
+              {loadingSessions ? 'Cargando...' : 'Actualizar'}
             </button>
           </div>
           
@@ -265,7 +265,7 @@ const sessionData = {
                 <div className="flex-1">
                   <h4 className="font-semibold">{session.title}</h4>
                   <p className="text-sm text-gray-500">
-                    🎯 {session.precision.toFixed(1)}% precisión • 👥 {session.participants} participantes • 📊 {session.averageScore.toFixed(1)} puntaje promedio
+                    {session.precision.toFixed(1)}% precisión • {session.participants} participantes • {session.averageScore.toFixed(1)} puntaje promedio
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
                     Código: {session.joinCode} • Duración: {((session.finishedAt - session.startedAt) / 60000).toFixed(0)} min

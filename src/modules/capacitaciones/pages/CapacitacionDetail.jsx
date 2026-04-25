@@ -403,7 +403,6 @@ const CapacitacionDetail = () => {
         <Sidebar />
         <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
           <div className="text-center py-16">
-            <div className="text-6xl mb-4">❌</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Capacitación no encontrada</h2>
             <p className="text-gray-600 mb-4">La capacitación que buscas no existe o ha sido eliminada.</p>
             <Link to="/capacitaciones" className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
@@ -429,11 +428,7 @@ const CapacitacionDetail = () => {
             <div className="flex justify-between items-start mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="text-3xl">
-                    {capacitacion?.categoria === 'Seguridad' ? '🛡️' :
-                     capacitacion?.categoria === 'Técnica' ? '⚙️' :
-                     capacitacion?.categoria === 'Liderazgo' ? '👑' : '📚'}
-                  </span>
+                  <span className="text-3xl"></span>
                   <div>
                     <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full mb-2">
                       {capacitacion?.categoria || 'General'}
@@ -451,7 +446,7 @@ const CapacitacionDetail = () => {
                 {/* Información del instructor */}
                 {capacitacion?.instructor && (
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xl">👨‍🏫</span>
+                    <span className="text-xl"></span>
                     <span className="text-gray-700 font-medium">Instructor: {capacitacion.instructor}</span>
                   </div>
                 )}
@@ -461,7 +456,7 @@ const CapacitacionDetail = () => {
                   {capacitacion?.fecha_inicio && capacitacion?.fecha_fin && (
                     <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-blue-600">📅</span>
+                        <span className="text-blue-600"></span>
                         <span className="text-sm font-medium text-blue-800">Duración</span>
                       </div>
                       <p className="text-blue-900 font-semibold">
@@ -472,7 +467,7 @@ const CapacitacionDetail = () => {
                   
                   <div className="bg-green-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-green-600">⏱️</span>
+                      <span className="text-green-600"></span>
                       <span className="text-sm font-medium text-green-800">Bloque</span>
                     </div>
                     <p className="text-green-900 font-semibold">{capacitacion?.duracionBloque || 60} minutos</p>
@@ -480,7 +475,7 @@ const CapacitacionDetail = () => {
                   
                   <div className="bg-orange-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-orange-600">👥</span>
+                      <span className="text-orange-600"></span>
                       <span className="text-sm font-medium text-orange-800">Cupo por bloque</span>
                     </div>
                     <p className="text-orange-900 font-semibold">{estadisticas.cupoPorBloque} personas</p>
@@ -488,7 +483,7 @@ const CapacitacionDetail = () => {
                   
                   <div className="bg-purple-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-purple-600">🕐</span>
+                      <span className="text-purple-600"></span>
                       <span className="text-sm font-medium text-purple-800">Horario</span>
                     </div>
                     <p className="text-purple-900 font-semibold">
@@ -501,7 +496,7 @@ const CapacitacionDetail = () => {
                 {capacitacion?.objetivos && (
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span>🎯</span>
+                      <span></span>
                       Objetivos de la capacitación
                     </h3>
                     <ul className="space-y-2">

@@ -149,21 +149,21 @@ const Dashboard = () => {
             titulo: 'Nueva capacitación creada',
             descripcion: 'Seguridad Industrial y Prevención de Riesgos',
             fecha: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-            icono: '📚'
+            icono: ''
           },
           {
             tipo: 'asignacion',
             titulo: 'Participantes asignados',
             descripcion: '5 participantes asignados a Manejo de Equipos',
             fecha: new Date(Date.now() - 4 * 60 * 60 * 1000),
-            icono: '👥'
+            icono: ''
           },
           {
             tipo: 'bloque_completado',
             titulo: 'Bloque completado',
             descripcion: 'Liderazgo y Gestión - Bloque matutino',
             fecha: new Date(Date.now() - 6 * 60 * 60 * 1000),
-            icono: '✅'
+            icono: ''
           }
         ];
 
@@ -319,7 +319,6 @@ const Dashboard = () => {
           {/* Accesos rápidos */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span>🚀</span>
               Accesos Rápidos
             </h2>
             
@@ -333,7 +332,6 @@ const Dashboard = () => {
                     <h3 className="text-lg font-semibold mb-1">Nueva Capacitación</h3>
                     <p className="text-purple-100 text-sm">Crear una nueva capacitación</p>
                   </div>
-                  <span className="text-3xl">➕</span>
                 </div>
               </Link>
 
@@ -428,7 +426,6 @@ const Dashboard = () => {
             {/* Actividad reciente */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span>🔔</span>
                 Actividad Reciente
               </h3>
               
@@ -457,7 +454,6 @@ const Dashboard = () => {
             {/* Estado del sistema */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span>⚡</span>
                 Estado del Sistema
               </h3>
               
@@ -500,25 +496,25 @@ const Dashboard = () => {
                   href="#" 
                   className="block text-sm text-purple-700 hover:text-purple-900 transition-colors"
                 >
-                  📖 Manual de usuario
+                  Manual de usuario
                 </a>
                 <a 
                   href="#" 
                   className="block text-sm text-purple-700 hover:text-purple-900 transition-colors"
                 >
-                  🆘 Soporte técnico
+                  Soporte técnico
                 </a>
                 <a 
                   href="#" 
                   className="block text-sm text-purple-700 hover:text-purple-900 transition-colors"
                 >
-                  📊 Reportes avanzados
+                  Reportes avanzados
                 </a>
                 <a 
                   href="#" 
                   className="block text-sm text-purple-700 hover:text-purple-900 transition-colors"
                 >
-                  ⚙️ Configuración
+                  Configuración
                 </a>
               </div>
             </div>

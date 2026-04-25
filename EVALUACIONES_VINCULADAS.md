@@ -16,7 +16,7 @@ Se ha implementado una nueva funcionalidad que permite vincular evaluaciones a c
   - Referencia a la capacitación
   - Tipo de evaluación
   - Datos de la capacitación vinculada
-- **Visualización**: Las evaluaciones vinculadas se muestran con un badge especial "🎓 Vinculada"
+- **Visualización**: Las evaluaciones vinculadas se muestran con un badge especial "Vinculada"
 
 ### 3. Estadísticas Avanzadas de Capacitación
 - **Análisis de Participación**:
@@ -63,8 +63,8 @@ Se ha implementado una nueva funcionalidad que permite vincular evaluaciones a c
 5. Crear la evaluación normalmente
 
 ### Para Ver Estadísticas Avanzadas:
-1. En la lista de evaluaciones, buscar aquellas con el badge "🎓 Vinculada"
-2. Hacer clic en el botón de estadísticas (📊)
+1. En la lista de evaluaciones, buscar aquellas con el badge "Vinculada"
+2. Hacer clic en el botón de estadísticas
 3. Revisar los análisis detallados
 
 ## Archivos Modificados/Creados

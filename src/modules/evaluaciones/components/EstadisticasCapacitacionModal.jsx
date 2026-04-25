@@ -119,7 +119,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span>📊</span>
+              <span></span>
               Estadísticas de Capacitación
             </h2>
             <button
@@ -184,7 +184,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
                 
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-purple-600">📊</span>
+                    <span className="text-purple-600"></span>
                     <span className="text-sm font-medium text-purple-800">Sesiones</span>
                   </div>
                   <p className="text-2xl font-bold text-purple-900">{estadisticas.totalSesiones}</p>
@@ -256,7 +256,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <div className="text-gray-400 text-4xl mb-4">📊</div>
+              <div className="text-gray-400 text-4xl mb-4"></div>
               <p className="text-gray-600">No hay datos suficientes para mostrar estadísticas</p>
             </div>
           )}

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 function fixSharedImports() {
-  console.log('🔧 Arreglando todas las importaciones de shared...');
+  console.log('Arreglando todas las importaciones de shared...');
   
   function processFile(filePath) {
     if (!fs.existsSync(filePath)) return;
@@ -42,7 +42,7 @@ function fixSharedImports() {
     
     if (updated) {
       fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`✅ Arreglado: ${filePath}`);
+      console.log(`Arreglado: ${filePath}`);
     }
   }
   
@@ -63,7 +63,7 @@ function fixSharedImports() {
   }
   
   processDirectory('./src/modules');
-  console.log('✅ Todas las importaciones de shared arregladas');
+  console.log('Todas las importaciones de shared arregladas');
 }
 
 fixSharedImports();

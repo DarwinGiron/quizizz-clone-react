@@ -258,7 +258,7 @@ const MyQuizzes = () => {
                               </div>
                               {quiz.capacitacionVinculada && (
                                 <div className="flex items-center gap-2 text-sm text-purple-600">
-                                  <span>📚</span>
+                                  <span></span>
                                   <span>Capacitación: {quiz.capacitacionVinculada.titulo}</span>
                                 </div>
                               )}
@@ -286,7 +286,7 @@ const MyQuizzes = () => {
                                 title="Estadísticas de Capacitación"
                                 className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
                               >
-                                <span className="text-sm">📊</span>
+                                <span className="text-sm"></span>
                               </button>
                             )}
                             <button
@@ -336,7 +336,7 @@ const MyQuizzes = () => {
 
                           <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
                             <div className="p-2 bg-orange-100 rounded-lg">
-                              <span className="text-orange-600 font-semibold text-sm">📊</span>
+                              <span className="text-orange-600 font-semibold text-sm"></span>
                             </div>
                             <div>
                               <p className="text-xs text-gray-500 font-medium">Precisión</p>

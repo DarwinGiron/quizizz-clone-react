@@ -222,7 +222,7 @@ const LiveSession = () => {
             {/* Lista de participantes */}
             <div className="mt-8 w-full text-center">
               <p className="text-3xl text-gray-400 mb-2">
-                👥 Esperando a los participantes...
+                Esperando a los participantes...
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {participants.map((p, i) => (
@@ -271,7 +271,7 @@ const LiveSession = () => {
               onClick={() => setShowQR(false)}
               className="absolute top-2 right-2 text-gray-700 hover:text-black text-lg"
             >
-              ✖
+              X
             </button>
             <QRCodeCanvas
               value={`https://join.myquiz.com/${sessionId}`}

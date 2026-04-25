@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 function fixBadImports() {
-  console.log('🔧 Arreglando importaciones incorrectas...');
+  console.log('Arreglando importaciones incorrectas...');
   
   function processFile(filePath) {
     if (!fs.existsSync(filePath)) return;
@@ -42,7 +42,7 @@ function fixBadImports() {
     
     if (updated) {
       fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`✅ Arreglado: ${filePath}`);
+      console.log(`Arreglado: ${filePath}`);
     }
   }
   
@@ -63,7 +63,7 @@ function fixBadImports() {
   }
   
   processDirectory('./src/modules');
-  console.log('✅ Importaciones incorrectas arregladas');
+  console.log('Importaciones incorrectas arregladas');
 }
 
 fixBadImports();

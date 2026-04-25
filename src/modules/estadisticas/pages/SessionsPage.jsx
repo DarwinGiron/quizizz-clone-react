@@ -102,7 +102,7 @@ const SessionsPage = () => {
                 </span>
                 <h3 className="font-semibold text-lg">{session.title}</h3>
                 <p className="text-sm text-gray-500">
-                  🎯 {session.precision.toFixed(1)}% precisión • 👥 {session.participants} participantes • 📊 {session.averageScore.toFixed(1)} puntaje promedio
+                  {session.precision.toFixed(1)}% precisión • {session.participants} participantes • {session.averageScore.toFixed(1)} puntaje promedio
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
                   Código: {session.joinCode} • Duración: {((session.finishedAt - session.startedAt) / 60000).toFixed(0)} min

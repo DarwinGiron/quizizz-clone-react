@@ -223,12 +223,12 @@ const CapacitacionesDashboard = () => {
   // Función para obtener icono según categoría
   const getIconoCategoria = (categoria) => {
     switch (categoria) {
-      case 'Seguridad': return '🛡️';
-      case 'Técnica': return '⚙️';
-      case 'Liderazgo': return '👑';
-      case 'Calidad': return '🎯';
-      case 'Operación': return '🔧';
-      default: return '📚';
+      case 'Seguridad': return '';
+      case 'Técnica': return '';
+      case 'Liderazgo': return '';
+      case 'Calidad': return '';
+      case 'Operación': return '';
+      default: return '';
     }
   };
 
@@ -273,7 +273,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-gray-600">Total</p>
                   <p className="text-2xl font-bold text-gray-900">{estadisticasGenerales.total}</p>
                 </div>
-                <div className="text-2xl">📚</div>
+                <div className="text-2xl"></div>
               </div>
             </div>
             
@@ -283,7 +283,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-green-600">En Curso</p>
                   <p className="text-2xl font-bold text-green-700">{estadisticasGenerales.activas}</p>
                 </div>
-                <div className="text-2xl">🟢</div>
+                <div className="text-2xl"></div>
               </div>
             </div>
             
@@ -293,7 +293,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-blue-600">Próximas</p>
                   <p className="text-2xl font-bold text-blue-700">{estadisticasGenerales.proximas}</p>
                 </div>
-                <div className="text-2xl">🔵</div>
+                <div className="text-2xl"></div>
               </div>
             </div>
             
@@ -303,7 +303,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-gray-600">Finalizadas</p>
                   <p className="text-2xl font-bold text-gray-700">{estadisticasGenerales.finalizadas}</p>
                 </div>
-                <div className="text-2xl">⚫</div>
+                <div className="text-2xl"></div>
               </div>
             </div>
             
@@ -313,7 +313,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-purple-600">Participantes</p>
                   <p className="text-2xl font-bold text-purple-700">{estadisticasGenerales.totalParticipantes}</p>
                 </div>
-                <div className="text-2xl">👥</div>
+                <div className="text-2xl"></div>
               </div>
             </div>
             
@@ -323,7 +323,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-orange-600">Ocupación</p>
                   <p className="text-2xl font-bold text-orange-700">{estadisticasGenerales.ocupacionPromedio}%</p>
                 </div>
-                <div className="text-2xl">📊</div>
+                <div className="text-2xl"></div>
               </div>
             </div>
           </div>
@@ -387,7 +387,7 @@ const CapacitacionesDashboard = () => {
         {capacitacionesFiltradas.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-white rounded-lg shadow-sm p-8 max-w-md mx-auto">
-              <div className="text-6xl mb-4">📚</div>
+              <div className="text-6xl mb-4"></div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 {busqueda || filtroEstado !== 'todas' || filtroCategoria !== 'todas' 
                   ? 'No se encontraron capacitaciones' 

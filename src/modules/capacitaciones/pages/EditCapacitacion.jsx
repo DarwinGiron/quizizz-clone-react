@@ -17,14 +17,14 @@ const EditCapacitacion = () => {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
-          console.log('🔍 Datos cargados de Firebase:', data);
+          console.log('Datos cargados de Firebase:', data);
           setForm(data);
         } else {
           alert('Capacitación no encontrada');
           navigate('/capacitaciones');
         }
       } catch (error) {
-        console.error('❌ Error al cargar capacitación:', error);
+        console.error('Error al cargar capacitación:', error);
         alert('Error al cargar la capacitación');
         navigate('/capacitaciones');
       }
@@ -44,8 +44,8 @@ const EditCapacitacion = () => {
     setLoading(true);
 
     try {
-      console.log('🔍 Datos del formulario antes de actualizar:', form);
-      console.log('🔍 Cupo que se va a actualizar:', form.cupo_bloque || form.cupoBloque, typeof (form.cupo_bloque || form.cupoBloque));
+      console.log('Datos del formulario antes de actualizar:', form);
+      console.log('Cupo que se va a actualizar:', form.cupo_bloque || form.cupoBloque, typeof (form.cupo_bloque || form.cupoBloque));
       
       // Actualizar la capacitación principal
       const ref = doc(db, 'capacitaciones', id);
@@ -61,24 +61,24 @@ const EditCapacitacion = () => {
         // Obtener el cupo correcto, considerando ambos nombres de campo
         const nuevoCupo = Number(form.cupo_bloque || form.cupoBloque || 0);
         
-        console.log('🔍 Actualizando bloques con cupo:', nuevoCupo);
+        console.log('Actualizando bloques con cupo:', nuevoCupo);
         
         bloquesSnapshot.docs.forEach((bloqueDoc) => {
-          console.log('🔍 Bloque antes:', bloqueDoc.data());
+          console.log('Bloque antes:', bloqueDoc.data());
           batch.update(bloqueDoc.ref, {
             cupo_disponible: nuevoCupo
           });
         });
         
         await batch.commit();
-        console.log(`✅ Actualizados ${bloquesSnapshot.size} bloques con nuevo cupo: ${nuevoCupo}`);
+        console.log(`Actualizados ${bloquesSnapshot.size} bloques con nuevo cupo: ${nuevoCupo}`);
       }
 
-      alert('✅ Capacitación y bloques actualizados correctamente');
+      alert('Capacitación y bloques actualizados correctamente');
       navigate('/capacitaciones');
     } catch (error) {
-      console.error('❌ Error al actualizar:', error);
-      alert('❌ Error al actualizar');
+      console.error('Error al actualizar:', error);
+      alert('Error al actualizar');
     } finally {
       setLoading(false);
     }
@@ -99,11 +99,11 @@ const EditCapacitacion = () => {
       // Eliminar capacitación
       await deleteDoc(doc(db, 'capacitaciones', id));
 
-      alert('🗑️ Capacitación eliminada');
+      alert('Capacitación eliminada');
       navigate('/capacitaciones');
     } catch (error) {
       console.error(error);
-      alert('❌ Error al eliminar');
+      alert('Error al eliminar');
     } finally {
       setLoading(false);
     }

@@ -150,7 +150,7 @@ const QuizEdit = () => {
                   />
                 </label>
                 <label className="flex flex-col text-sm">
-                  🏅 Puntos por pregunta
+                  Puntos por pregunta
                   <input
                     type="number"
                     className="border px-3 py-1 rounded"

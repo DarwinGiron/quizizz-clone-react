@@ -316,7 +316,7 @@ const CalendarioRango = ({ fechaInicio, fechaFin, onSeleccionarRango, capacitaci
           return (
             <div className="p-4 bg-yellow-50 border-t border-gray-300">
               <div className="text-sm font-medium text-yellow-800 mb-2">
-                📚 Capacitaciones programadas este mes:
+                Capacitaciones programadas este mes:
               </div>
               <div className="space-y-1">
                 {capacitacionesDelMes.map(cap => (

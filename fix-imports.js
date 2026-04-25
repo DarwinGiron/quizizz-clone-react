@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 function fixAllImports() {
-  console.log('🔧 Arreglando todas las importaciones...');
+  console.log('Arreglando todas las importaciones...');
   
   // Directorio de módulos
   const modulesDir = './src/modules';
@@ -55,7 +55,7 @@ function fixAllImports() {
     
     if (updated) {
       fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`✅ Arreglado: ${filePath}`);
+      console.log(`Arreglado: ${filePath}`);
     }
   }
   
@@ -76,7 +76,7 @@ function fixAllImports() {
   }
   
   processDirectory(modulesDir);
-  console.log('✅ Todas las importaciones arregladas');
+  console.log('Todas las importaciones arregladas');
 }
 
 fixAllImports();

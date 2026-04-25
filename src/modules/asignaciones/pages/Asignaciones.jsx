@@ -183,20 +183,16 @@ export default function Asignaciones() {
           {/* Características destacadas */}
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 mb-4 border border-purple-200">
             <div className="flex items-center mb-2">
-              <span className="text-lg mr-2">✨</span>
-              <h3 className="text-sm font-semibold text-purple-900">¡Nueva experiencia de asignación!</h3>
+              <h3 className="text-sm font-semibold text-purple-900">Nueva experiencia de asignación</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-purple-800">
               <div className="flex items-center">
-                <span className="mr-2">🖱️</span>
                 <span>Arrastra y suelta personal</span>
               </div>
               <div className="flex items-center">
-                <span className="mr-2">📅</span>
                 <span>Vista semanal completa</span>
               </div>
               <div className="flex items-center">
-                <span className="mr-2">⚡</span>
                 <span>Asignación en tiempo real</span>
               </div>
             </div>

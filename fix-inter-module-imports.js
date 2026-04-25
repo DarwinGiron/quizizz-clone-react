@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 function fixInterModuleImports() {
-  console.log('🔧 Arreglando importaciones entre módulos...');
+  console.log('Arreglando importaciones entre módulos...');
   
   // Mapeo de componentes que se movieron a otros módulos
   const interModuleImports = {
@@ -43,7 +43,7 @@ function fixInterModuleImports() {
     
     if (updated) {
       fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`✅ Arreglado: ${filePath}`);
+      console.log(`Arreglado: ${filePath}`);
     }
   }
   
@@ -64,7 +64,7 @@ function fixInterModuleImports() {
   }
   
   processDirectory('./src/modules');
-  console.log('✅ Importaciones entre módulos arregladas');
+  console.log('Importaciones entre módulos arregladas');
 }
 
 fixInterModuleImports();

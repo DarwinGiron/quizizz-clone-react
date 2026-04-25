@@ -41,7 +41,7 @@ export default function UsuarioCard({ usuario, cuadrilla }) {
 
       {esSupervisor && (
         <>
-          <p className="text-sm mb-2 mt-3 text-gray-300">👥 Cuadrilla: {cuadrilla.length} miembros</p>
+          <p className="text-sm mb-2 mt-3 text-gray-300">Cuadrilla: {cuadrilla.length} miembros</p>
           <div className="bg-gray-700 p-3 rounded max-h-32 overflow-y-auto text-sm space-y-2">
             {cuadrilla.slice(0, 3).map((miembro, idx) => (
               <div key={idx} className="border-b border-gray-600 pb-1">

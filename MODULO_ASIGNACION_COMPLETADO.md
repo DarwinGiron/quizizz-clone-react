@@ -1,46 +1,46 @@
-# 🎉 Módulo de Asignación Intuitiva - COMPLETADO
+# Módulo de Asignación Intuitiva - COMPLETADO
 
-## ✅ Características Implementadas
+## Características Implementadas
 
-### 🔐 **Control de Acceso Inteligente**
+### Control de Acceso Inteligente
 - **Detección automática del rol del usuario**
 - **Administradores**: Ven todos los supervisores y sus cuadrillas
-- **Supervisores**: Solo ven su propia cuadrilla (marcada con 👑)
+- **Supervisores**: Solo ven su propia cuadrilla (marcada como supervisor)
 - **Carga automática de datos** desde Firebase
 
-### 👥 **Gestión de Personal**
+### Gestión de Personal
 - **Carga desde base de datos**: Supervisores y cuadrillas reales
 - **Datos de ejemplo**: Se muestran automáticamente si no hay datos reales
 - **Información completa**: Nombre, código, área, máquina/equipo
 - **Estado visual**: Disponible vs. Asignado
 
-### 🔍 **Sistema de Filtros Avanzado**
-- **📍 Por Área**: Dropdown con todas las áreas disponibles
-- **🔧 Por Equipo/Máquina**: Dropdown con todos los equipos/máquinas
-- **👥 Por Disponibilidad**: Todos / Solo disponibles / Solo asignados
-- **🗑️ Limpiar filtros**: Botón para resetear todos los filtros
+### Sistema de Filtros Avanzado
+- **Por Área**: Dropdown con todas las áreas disponibles
+- **Por Equipo/Máquina**: Dropdown con todos los equipos/máquinas
+- **Por Disponibilidad**: Todos / Solo disponibles / Solo asignados
+- **Limpiar filtros**: Botón para resetear todos los filtros
 
-### 🖱️ **Interfaz Drag & Drop Mejorada**
+### Interfaz Drag & Drop Mejorada
 - **Arrastrar y soltar** personal a horarios
 - **Validaciones automáticas**: 
-  - ✅ Verificar cupo disponible
-  - ✅ Evitar duplicados
-  - ✅ Solo permitir personal disponible
+  - Verificar cupo disponible
+  - Evitar duplicados
+  - Solo permitir personal disponible
 - **Feedback visual** durante el arrastre
 - **Actualización en tiempo real**
 
-### 📅 **Vista Semanal Completa**
+### Vista Semanal Completa
 - **7 días completos** con todos los horarios
 - **Navegación** entre semanas (← →)
 - **Código de colores** según ocupación:
-  - 🟢 Verde: Menos del 50%
-  - 🟡 Amarillo: 50-80%
-  - 🟠 Naranja: 80-99%
-  - 🔴 Rojo: 100% (completo)
+  - Verde: Menos del 50%
+  - Amarillo: 50-80%
+  - Naranja: 80-99%
+  - Rojo: 100% (completo)
 - **Barra de progreso** en cada horario
 - **Lista de asignados** con información completa
 
-### 📊 **Estadísticas en Tiempo Real**
+### Estadísticas en Tiempo Real
 - **Panel de personal** con contadores
 - **Estadísticas generales**:
   - Total asignaciones
