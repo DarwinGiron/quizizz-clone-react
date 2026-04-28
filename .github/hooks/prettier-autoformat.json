@@ -1,0 +1,6 @@
+{
+  "event": "PostToolUse",
+  "tool": "replace_string_in_file",
+  "command": "npx prettier --write {file}",
+  "description": "Auto-format edited files with Prettier after using replace_string_in_file"
+}

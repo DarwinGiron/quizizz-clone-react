@@ -90,32 +90,33 @@ export default function GestionarCuadrilla() {
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {cuadrilla.map((u) => (
           <div
             key={u.id}
-            className="bg-gray-800 text-white p-4 rounded flex justify-between items-center"
+            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
           >
-            <div>
-              <p className="font-semibold">{u.nombre}</p>
-              <p className="text-sm text-gray-300">
-                {u.codigo || "Sin código"} — {u.area || "Sin área"}
-              </p>
+            <div className="flex-1 mb-4">
+              <p className="text-sm font-semibold text-gray-500">{u.codigo || 'Sin código'}</p>
+              <h3 className="text-lg font-bold text-gray-900">{u.nombre}</h3>
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 pt-4 border-t border-gray-200">
               <button
                 onClick={() => setEditarMiembro(u)}
-                className="text-blue-300 hover:text-blue-200"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 title="Editar"
               >
-                <Pencil size={18} />
+                <Pencil size={16} />
+                Editar
               </button>
               <button
                 onClick={() => eliminar(u.id)}
-                className="text-red-400 hover:text-red-300"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                 title="Eliminar"
               >
-                <Trash2 size={18} />
+                <Trash2 size={16} />
+                Eliminar
               </button>
             </div>
           </div>

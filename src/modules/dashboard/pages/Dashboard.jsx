@@ -6,7 +6,6 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { Link } from 'react-router-dom';
 import { format, parseISO, isAfter, isBefore, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Sidebar } from '../../../shared';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -213,8 +212,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+        <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
             <p className="text-gray-600">Cargando dashboard...</p>
@@ -226,8 +224,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">

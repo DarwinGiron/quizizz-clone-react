@@ -5,7 +5,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { format, isAfter, isBefore, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Sidebar } from '../../../shared';
 import { GestionarHorariosModal } from '../components';
 
 const CapacitacionesDashboard = () => {
@@ -235,8 +234,7 @@ const CapacitacionesDashboard = () => {
   if (loading) {
     return (
       <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+        <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
             <p className="text-gray-600">Cargando capacitaciones...</p>
@@ -248,8 +246,7 @@ const CapacitacionesDashboard = () => {
 
   return (
     <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">

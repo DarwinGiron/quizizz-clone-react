@@ -14,7 +14,6 @@ import { db, auth } from '../../../firebase/config';
 import { format, parseISO, isSameDay, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Sidebar } from '../../../shared';
 import { BackButton } from '../../../shared';
 
 const CapacitacionDetail = () => {
@@ -386,8 +385,7 @@ const CapacitacionDetail = () => {
   if (loading) {
     return (
       <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+        <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
             <p className="text-gray-600">Cargando capacitación...</p>
@@ -400,8 +398,7 @@ const CapacitacionDetail = () => {
   if (!capacitacion) {
     return (
       <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+        <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="text-center py-16">
             <div className="text-6xl mb-4">❌</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Capacitación no encontrada</h2>
@@ -419,8 +416,7 @@ const CapacitacionDetail = () => {
 
   return (
     <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="mb-8">
           <BackButton to="/capacitaciones" label="← Volver a Capacitaciones" className="mb-6" />

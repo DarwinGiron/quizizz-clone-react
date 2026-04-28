@@ -7,7 +7,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../firebase/config';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Sidebar } from '../../../shared';
 import { BackButton } from '../../../shared';
 
 export default function AsignacionIntuitiva() {
@@ -651,8 +650,7 @@ export default function AsignacionIntuitiva() {
   if (loading) {
     return (
       <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+        <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
             <p className="text-gray-600">Cargando sistema de asignaciones...</p>
@@ -664,8 +662,7 @@ export default function AsignacionIntuitiva() {
 
   return (
     <div className="flex">
-      <Sidebar />
-      <div className="flex-1 bg-gray-50 p-6 ml-60 min-h-screen">
+      <div className="flex-1 bg-gray-50 p-6 min-h-screen">
         <BackButton to="/asignaciones" label="Volver a Asignaciones" className="mb-4" />
         
         {/* Header */}

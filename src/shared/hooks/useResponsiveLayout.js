@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSidebar } from '../contexts/SidebarContext';
 
 export const useResponsiveLayout = () => {
-  const { sidebarOpen, sidebarCollapsed, getContentMargin } = useSidebar();
+  const { sidebarOpen, sidebarCollapsed } = useSidebar();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
@@ -15,24 +15,16 @@ export const useResponsiveLayout = () => {
   }, []);
 
   const getContentStyles = () => {
-    if (!isDesktop) {
-      return {
-        marginLeft: '0px',
-        width: '100%',
-        transition: 'all 0.3s ease-in-out'
-      };
-    }
-
+    // No sobrescribir marginLeft - dejar que Tailwind lo maneje
     return {
-      marginLeft: getContentMargin(),
-      width: `calc(100% - ${getContentMargin()})`,
       transition: 'all 0.3s ease-in-out'
     };
   };
 
   const getContentClasses = () => {
-    return `transition-all duration-300 ease-in-out ${
-      !isDesktop ? 'w-full' : ''
+    // ml-64 para dejar espacio al sidebar fijo (w-64)
+    return `transition-all duration-300 ease-in-out ml-64 ${
+      !isDesktop ? 'ml-0' : ''
     }`;
   };
 

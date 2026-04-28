@@ -11,35 +11,8 @@ export const useSidebar = () => {
 };
 
 export const SidebarProvider = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Estado inicial basado en el tamaño de pantalla
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024; // Solo abierto por defecto en desktop (lg)
-    }
-    return false;
-  });
-
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  // Efecto para manejar el redimensionamiento de la ventana
-  useEffect(() => {
-    const handleResize = () => {
-      // En pantallas grandes, abrir automáticamente
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true);
-      } else {
-        // En pantallas pequeñas, cerrar automáticamente
-        setSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);

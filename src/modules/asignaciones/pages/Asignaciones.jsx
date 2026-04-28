@@ -4,7 +4,6 @@ import { db } from '../../../firebase/config';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Sidebar } from '../../../shared';
 
 export default function Asignaciones() {
   const [capacitaciones, setCapacitaciones] = useState([]);
@@ -160,8 +159,7 @@ export default function Asignaciones() {
   if (loading) {
     return (
       <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+        <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
             <p className="text-gray-600">Cargando capacitaciones...</p>
@@ -173,8 +171,7 @@ export default function Asignaciones() {
 
   return (
     <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 ml-60 bg-gray-50 min-h-screen">
+      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {/* Header mejorado */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Asignar Horarios</h1>
