@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
 import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/config';
+import ResponseCounter from '../components/ResponseCounter';
 
 const LiveSession = () => {
   const { quizId, sessionId } = useParams();
@@ -244,16 +245,10 @@ const LiveSession = () => {
         {sessionStatus === 'started' && (!remoteCountdown || remoteCountdown <= 0) && quizQuestions.length > 0 && (
           <div className="mt-8 text-center animate-fadeIn">
             <h3 className="text-2xl font-bold mb-4 animate-bounce">Pregunta en vivo</h3>
-            <div className="bg-purple-800 rounded-xl p-6 text-xl text-white text-center mb-4 min-h-[80px] flex items-center justify-center animate-fadeInDown">
+            <div className="bg-purple-800 rounded-xl p-6 text-xl text-white text-center mb-6 min-h-[80px] flex items-center justify-center animate-fadeInDown">
               {quizQuestions[0].text || quizQuestions[0].pregunta || 'Pregunta'}
             </div>
-            <div className="flex flex-col gap-2 mt-4">
-              {quizQuestions[0].options.map((opt, i) => (
-                <div key={i} className="w-full py-3 rounded-xl text-lg font-semibold border-2 border-purple-400 bg-black bg-opacity-40 text-white animate-fadeInUp">
-                  {opt}
-                </div>
-              ))}
-            </div>
+            <ResponseCounter sessionId={sessionId} currentQuestionIndex={0} question={quizQuestions[0]} />
           </div>
         )}
       </div>
