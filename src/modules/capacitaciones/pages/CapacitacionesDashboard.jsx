@@ -29,66 +29,7 @@ const CapacitacionesDashboard = () => {
           ...doc.data() 
         }));
 
-        // Si no hay datos reales, usar datos de ejemplo
-        if (listaCapacitaciones.length === 0) {
-          const datosEjemplo = [
-            {
-              id: 'ejemplo1',
-              titulo: 'Seguridad Industrial y Prevención de Riesgos',
-              descripcion: 'Capacitación integral sobre normas de seguridad, identificación de riesgos y uso correcto de equipos de protección personal.',
-              categoria: 'Seguridad',
-              fechaInicio: '2025-01-15',
-              fechaFin: '2025-01-30',
-              duracionBloque: 60,
-              cupoBloque: 25,
-              horaInicioDia: '08:00',
-              horaFinDia: '17:00',
-              instructor: 'Ing. María García'
-            },
-            {
-              id: 'ejemplo2',
-              titulo: 'Manejo de Equipos Pesados',
-              descripcion: 'Curso práctico para la operación segura y eficiente de maquinaria pesada.',
-              categoria: 'Técnica',
-              fechaInicio: '2025-01-20',
-              fechaFin: '2025-02-05',
-              duracionBloque: 90,
-              cupoBloque: 15,
-              horaInicioDia: '07:00',
-              horaFinDia: '16:00',
-              instructor: 'Tec. Carlos López'
-            },
-            {
-              id: 'ejemplo3',
-              titulo: 'Liderazgo y Gestión de Equipos',
-              descripcion: 'Desarrollo de habilidades directivas y comunicación efectiva.',
-              categoria: 'Liderazgo',
-              fechaInicio: '2025-01-10',
-              fechaFin: '2025-01-12',
-              duracionBloque: 120,
-              cupoBloque: 12,
-              horaInicioDia: '08:30',
-              horaFinDia: '17:30',
-              instructor: 'Lic. Ana Ruiz'
-            },
-            {
-              id: 'ejemplo4',
-              titulo: 'Primeros Auxilios en el Trabajo',
-              descripcion: 'Formación esencial en técnicas de primeros auxilios y RCP.',
-              categoria: 'Seguridad',
-              fechaInicio: '2025-02-01',
-              fechaFin: '2025-02-10',
-              duracionBloque: 45,
-              cupoBloque: 20,
-              horaInicioDia: '09:00',
-              horaFinDia: '18:00',
-              instructor: 'Dr. Pedro Morales'
-            }
-          ];
-          setCapacitaciones(datosEjemplo);
-        } else {
-          setCapacitaciones(listaCapacitaciones);
-        }
+        setCapacitaciones(listaCapacitaciones);
 
         // Cargar todos los bloques para estadísticas
         const bloquesSnapshot = await getDocs(collection(db, 'capacitacion_bloques'));
@@ -221,14 +162,7 @@ const CapacitacionesDashboard = () => {
 
   // Función para obtener icono según categoría
   const getIconoCategoria = (categoria) => {
-    switch (categoria) {
-      case 'Seguridad': return '🛡️';
-      case 'Técnica': return '⚙️';
-      case 'Liderazgo': return '👑';
-      case 'Calidad': return '🎯';
-      case 'Operación': return '🔧';
-      default: return '📚';
-    }
+    return categoria || 'Capacitación';
   };
 
   if (loading) {
@@ -256,7 +190,6 @@ const CapacitacionesDashboard = () => {
             </div>
             <Link to="/capacitaciones/nueva">
               <button className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm font-medium">
-                <span className="mr-2">➕</span>
                 Nueva Capacitación
               </button>
             </Link>
@@ -270,7 +203,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-gray-600">Total</p>
                   <p className="text-2xl font-bold text-gray-900">{estadisticasGenerales.total}</p>
                 </div>
-                <div className="text-2xl">📚</div>
+
               </div>
             </div>
             
@@ -280,7 +213,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-green-600">En Curso</p>
                   <p className="text-2xl font-bold text-green-700">{estadisticasGenerales.activas}</p>
                 </div>
-                <div className="text-2xl">🟢</div>
+
               </div>
             </div>
             
@@ -290,7 +223,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-blue-600">Próximas</p>
                   <p className="text-2xl font-bold text-blue-700">{estadisticasGenerales.proximas}</p>
                 </div>
-                <div className="text-2xl">🔵</div>
+
               </div>
             </div>
             
@@ -300,7 +233,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-gray-600">Finalizadas</p>
                   <p className="text-2xl font-bold text-gray-700">{estadisticasGenerales.finalizadas}</p>
                 </div>
-                <div className="text-2xl">⚫</div>
+
               </div>
             </div>
             
@@ -310,7 +243,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-purple-600">Participantes</p>
                   <p className="text-2xl font-bold text-purple-700">{estadisticasGenerales.totalParticipantes}</p>
                 </div>
-                <div className="text-2xl">👥</div>
+
               </div>
             </div>
             
@@ -320,7 +253,7 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-orange-600">Ocupación</p>
                   <p className="text-2xl font-bold text-orange-700">{estadisticasGenerales.ocupacionPromedio}%</p>
                 </div>
-                <div className="text-2xl">📊</div>
+
               </div>
             </div>
           </div>
@@ -384,7 +317,7 @@ const CapacitacionesDashboard = () => {
         {capacitacionesFiltradas.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-white rounded-lg shadow-sm p-8 max-w-md mx-auto">
-              <div className="text-6xl mb-4">📚</div>
+
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 {busqueda || filtroEstado !== 'todas' || filtroCategoria !== 'todas' 
                   ? 'No se encontraron capacitaciones' 
@@ -475,7 +408,6 @@ const CapacitacionesDashboard = () => {
                     <div className="space-y-2 text-sm">
                       {cap.fechaInicio && cap.fechaFin && (
                         <div className="flex items-center text-gray-500">
-                          <span className="mr-2">📅</span>
                           <span>
                             {format(parseISO(cap.fechaInicio), 'dd MMM', { locale: es })} - {format(parseISO(cap.fechaFin), 'dd MMM yyyy', { locale: es })}
                           </span>
@@ -483,13 +415,11 @@ const CapacitacionesDashboard = () => {
                       )}
                       
                       <div className="flex items-center text-gray-500">
-                        <span className="mr-2">⏱️</span>
                         <span>Bloques de {cap.duracionBloque || 60} min</span>
                       </div>
                       
                       {cap.instructor && (
                         <div className="flex items-center text-gray-500">
-                          <span className="mr-2">👨‍🏫</span>
                           <span>{cap.instructor}</span>
                         </div>
                       )}
@@ -504,7 +434,7 @@ const CapacitacionesDashboard = () => {
                         onClick={(e) => e.stopPropagation()}
                         className="flex-1 bg-purple-600 text-white text-center py-2 px-3 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
                       >
-                        📋 Asignar
+                        Asignar
                       </Link>
                       {user && (
                         <button
@@ -515,7 +445,7 @@ const CapacitacionesDashboard = () => {
                           className="bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition text-sm font-medium"
                           title="Gestionar Horarios"
                         >
-                          🕒
+                          Horarios
                         </button>
                       )}
                       <Link
@@ -523,7 +453,7 @@ const CapacitacionesDashboard = () => {
                         onClick={(e) => e.stopPropagation()}
                         className="bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
                       >
-                        ✏️
+                        Editar
                       </Link>
                     </div>
                   </div>

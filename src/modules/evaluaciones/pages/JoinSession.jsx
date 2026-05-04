@@ -4,6 +4,7 @@ import { ref, push, onValue, get } from 'firebase/database';
 import { db, rtdb } from '../../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { QuestionCard } from '../components';
+import { Avatar3D, DEFAULT_AVATAR_CONFIG, AVATAR_COLORS, AVATAR_STYLES, AVATAR_ACCESSORIES } from '../../../shared/components/Avatar';
 import confetti from '../../../utils/confetti';
 
 const JoinSession = () => {
@@ -17,11 +18,40 @@ const JoinSession = () => {
   const [participant, setParticipant] = useState(() => {
     try {
       const saved = localStorage.getItem('quizizz_participant');
-      return saved ? JSON.parse(saved) : { name: '', type: '', personnelCode: '' };
+      return saved
+        ? JSON.parse(saved)
+        : { name: '', type: '', personnelCode: '', avatarConfig: DEFAULT_AVATAR_CONFIG };
     } catch {
-      return { name: '', type: '', personnelCode: '' };
+      return { name: '', type: '', personnelCode: '', avatarConfig: DEFAULT_AVATAR_CONFIG };
     }
   });
+
+  const hashString = (text) => {
+    return String(text || '')
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  };
+
+  const getAvatarConfigForParticipant = (participantData) => {
+    const name = participantData?.name || participantData?.personnelCode || 'Invitado';
+    const seed = Math.abs(hashString(name));
+    const styles = Object.values(AVATAR_STYLES);
+    const style = styles[seed % styles.length];
+    const skin = AVATAR_COLORS.skin[seed % AVATAR_COLORS.skin.length];
+    const hair = AVATAR_COLORS.hair[seed % AVATAR_COLORS.hair.length];
+    const clothes = AVATAR_COLORS.clothes[seed % AVATAR_COLORS.clothes.length];
+    const accessory = AVATAR_ACCESSORIES[seed % AVATAR_ACCESSORIES.length].id;
+
+    return {
+      ...DEFAULT_AVATAR_CONFIG,
+      style: style.id,
+      skinColor: skin,
+      hairColor: hair,
+      clothesColor: clothes,
+      shoesColor: '#333333',
+      accessory,
+    };
+  };
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState('');
   const [quizQuestions, setQuizQuestions] = useState([]);
@@ -161,7 +191,10 @@ const JoinSession = () => {
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
     const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
       const data = snapshot.val();
-      setParticipants(data ? Object.values(data) : []);
+      setParticipants(data ? Object.values(data).map((p) => ({
+        ...p,
+        avatarConfig: p.avatarConfig || getAvatarConfigForParticipant(p),
+      })) : []);
     });
     return () => {
       unsubscribe();
@@ -214,7 +247,14 @@ const JoinSession = () => {
       tipo = 'casual';
       code = '';
     }
-    const participanteObj = { name: nombre, type: tipo, personnelCode: code };
+
+    const avatarConfig = getAvatarConfigForParticipant({ name: nombre, type: tipo, personnelCode: code });
+    const participanteObj = {
+      name: nombre,
+      type: tipo,
+      personnelCode: code,
+      avatarConfig,
+    };
     setParticipant(participanteObj);
     localStorage.setItem('quizizz_participant', JSON.stringify(participanteObj));
     // Registrar en RTDB
@@ -306,6 +346,9 @@ const JoinSession = () => {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
         <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-md flex flex-col items-center backdrop-blur-md border border-purple-400">
           <h2 className="text-2xl font-bold text-purple-200 mb-2 text-center">¿Cómo te llamas?</h2>
+          <div className="mb-6">
+            <Avatar3D config={participant.avatarConfig} animation="idle" size="md" interactive={false} />
+          </div>
           <form
             onSubmit={handleRegisterParticipant}
             className="w-full flex flex-col gap-4 items-center"
@@ -351,12 +394,21 @@ const JoinSession = () => {
           {/* Lista de participantes en el lobby */}
           <div className="w-full mt-4">
             <h3 className="text-md text-purple-300 mb-2 text-center">Participantes en la sala:</h3>
-            <div className="flex flex-wrap justify-center gap-2">
-              {participants.length === 0 && <span className="text-gray-400">Nadie se ha unido aún</span>}
-              {participants.map((p, i) => (
-                <span key={i} className="bg-purple-700 px-4 py-1 rounded-full text-base text-white shadow">{p.name || `Participante ${i + 1}`}</span>
-              ))}
-            </div>
+            {participants.length === 0 ? (
+              <div className="text-gray-400 text-center">Nadie se ha unido aún</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                {participants.map((p, i) => (
+                  <div key={i} className="bg-purple-700/70 rounded-3xl p-4 flex items-center gap-4 shadow-lg">
+                    <Avatar3D config={p.avatarConfig} animation="idle" size="sm" interactive={false} />
+                    <div className="text-left">
+                      <p className="font-semibold text-white">{p.name || `Participante ${i + 1}`}</p>
+                      {p.personnelCode && <p className="text-sm text-gray-300">Código: {p.personnelCode}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         {(remoteCountdown && remoteCountdown > 0) && (

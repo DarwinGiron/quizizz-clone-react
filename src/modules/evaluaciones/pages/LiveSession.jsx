@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
 import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/config';
+import { Avatar3D, DEFAULT_AVATAR_CONFIG, AVATAR_COLORS, AVATAR_STYLES, AVATAR_ACCESSORIES } from '../../../shared/components/Avatar';
 import ResponseCounter from '../components/ResponseCounter';
 
 const LiveSession = () => {
@@ -24,6 +25,33 @@ const LiveSession = () => {
   const [participantToDelete, setParticipantToDelete] = useState(null);
   // Estado para cuenta regresiva
   const [countdown, setCountdown] = useState(null);
+
+  const hashString = (text) => {
+    return String(text || '')
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  };
+
+  const getAvatarConfigForParticipant = (participantData) => {
+    const name = participantData?.name || participantData?.personnelCode || 'Invitado';
+    const seed = Math.abs(hashString(name));
+    const styles = Object.values(AVATAR_STYLES);
+    const style = styles[seed % styles.length];
+    const skin = AVATAR_COLORS.skin[seed % AVATAR_COLORS.skin.length];
+    const hair = AVATAR_COLORS.hair[seed % AVATAR_COLORS.hair.length];
+    const clothes = AVATAR_COLORS.clothes[seed % AVATAR_COLORS.clothes.length];
+    const accessory = AVATAR_ACCESSORIES[seed % AVATAR_ACCESSORIES.length].id;
+
+    return {
+      ...DEFAULT_AVATAR_CONFIG,
+      style: style.id,
+      skinColor: skin,
+      hairColor: hair,
+      clothesColor: clothes,
+      shoesColor: '#333333',
+      accessory,
+    };
+  };
   const [showCountdown, setShowCountdown] = useState(false);
   const [remoteCountdown, setRemoteCountdown] = useState(null);
   const [user, loading] = useAuthState(auth);
@@ -35,7 +63,12 @@ const LiveSession = () => {
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
     const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.values(data) : [];
+      const list = data
+        ? Object.values(data).map((p) => ({
+            ...p,
+            avatarConfig: p.avatarConfig || getAvatarConfigForParticipant(p),
+          }))
+        : [];
       setParticipants(list);
     });
 
@@ -225,18 +258,29 @@ const LiveSession = () => {
               <p className="text-3xl text-gray-400 mb-2">
                 👥 Esperando a los participantes...
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {participants.map((p, i) => (
-                  <div
-                    key={i}
-                    className="bg-purple-700 px-6 py-2 rounded-full text-base text-white cursor-pointer hover:bg-red-600 transition"
-                    onClick={() => { setShowDeleteModal(true); setParticipantToDelete(p); }}
-                    title="Eliminar participante"
-                  >
-                    {p.name || `Participante ${i + 1}`}
-                  </div>
-                ))}
-              </div>
+              {participants.length === 0 ? (
+                <div className="text-gray-300">Aún no hay participantes en la sala.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                  {participants.map((p, i) => (
+                    <div
+                      key={i}
+                      className="bg-purple-700/70 rounded-3xl p-4 flex flex-col items-center gap-3 shadow-lg cursor-pointer hover:bg-purple-600 transition"
+                      onClick={() => { setShowDeleteModal(true); setParticipantToDelete(p); }}
+                      title="Eliminar participante"
+                    >
+                      <Avatar3D
+                        config={p.avatarConfig || getAvatarConfigForParticipant(p)}
+                        animation="idle"
+                        size="sm"
+                        interactive={false}
+                      />
+                      <div className="text-white font-semibold">{p.name || `Participante ${i + 1}`}</div>
+                      {p.personnelCode && <div className="text-xs text-gray-300">Cód: {p.personnelCode}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
