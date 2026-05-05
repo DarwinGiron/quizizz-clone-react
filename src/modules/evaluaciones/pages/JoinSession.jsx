@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, push, onValue, get } from 'firebase/database';
+import { ref, push, update, onValue, get } from 'firebase/database';
 import { db, rtdb } from '../../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { QuestionCard } from '../components';
 import { Avatar3D, DEFAULT_AVATAR_CONFIG, AVATAR_COLORS, AVATAR_STYLES, AVATAR_ACCESSORIES } from '../../../shared/components/Avatar';
+import { useAvatar } from '../../../shared/components/Avatar';
 import confetti from '../../../utils/confetti';
 
 const JoinSession = () => {
@@ -54,6 +55,11 @@ const JoinSession = () => {
   };
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState('');
+  const [myAnimation, setMyAnimation] = useState('idle');
+  const [myParticipantKey, setMyParticipantKey] = useState(null);
+  const myKeyRef = useRef(null);
+  const autoReturnRef = useRef(null);
+  const autoAnimIntervalRef = useRef(null);
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(() => {
     // Siempre empezar desde 0 para nuevas sesiones
@@ -189,12 +195,44 @@ const JoinSession = () => {
       }
     });
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
-    const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
+    const unsubscribeParticipants = onValue(participantsRef, async (snapshot) => {
       const data = snapshot.val();
-      setParticipants(data ? Object.values(data).map((p) => ({
-        ...p,
-        avatarConfig: p.avatarConfig || getAvatarConfigForParticipant(p),
-      })) : []);
+      if (!data) {
+        setParticipants([]);
+        return;
+      }
+      
+      // Cargar avatares con soporte para Firebase
+      const participantsWithAvatars = await Promise.all(
+        Object.values(data).map(async (p) => {
+          let avatarConfig = p.avatarConfig;
+          
+          // Si no tiene avatarConfig, intentar cargar desde Firebase
+          if (!avatarConfig && p.userId) {
+            try {
+              const avatarRef = ref(rtdb, `avatars/${p.userId}`);
+              const snapshot = await get(avatarRef);
+              if (snapshot.exists()) {
+                avatarConfig = snapshot.val();
+              }
+            } catch (err) {
+              console.log('No se pudo cargar avatar de Firebase:', err);
+            }
+          }
+          
+          // Si aún no hay avatarConfig, generar uno
+          if (!avatarConfig) {
+            avatarConfig = getAvatarConfigForParticipant(p);
+          }
+          
+          return {
+            ...p,
+            avatarConfig,
+          };
+        })
+      );
+      
+      setParticipants(participantsWithAvatars);
     });
     return () => {
       unsubscribe();
@@ -211,6 +249,45 @@ const JoinSession = () => {
     });
     return () => unsubscribe();
   }, [sessionId]);
+
+  // ── SISTEMA DE ANIMACIONES DEL AVATAR ──
+
+  const updateMyAnimation = useCallback(async (animName) => {
+    setMyAnimation(animName);
+    if (myKeyRef.current && sessionId) {
+      try {
+        await update(ref(rtdb, `liveSessions/${sessionId}/participants/${myKeyRef.current}`), { animation: animName });
+      } catch (err) {
+        console.log('Error actualizando animación:', err);
+      }
+    }
+  }, [sessionId]);
+
+  const triggerAnimation = useCallback((animName, duration = 5000) => {
+    if (autoReturnRef.current) clearTimeout(autoReturnRef.current);
+    updateMyAnimation(animName);
+    autoReturnRef.current = setTimeout(() => {
+      updateMyAnimation('idle');
+    }, duration);
+  }, [updateMyAnimation]);
+
+  // Auto-animación cada 10 segundos en el lobby
+  useEffect(() => {
+    if (step !== 'lobby') {
+      clearInterval(autoAnimIntervalRef.current);
+      clearTimeout(autoReturnRef.current);
+      return;
+    }
+    const AUTO_ANIMATIONS = ['wave', 'dance', 'celebrate', 'laugh', 'scratch', 'jump'];
+    autoAnimIntervalRef.current = setInterval(() => {
+      const randomAnim = AUTO_ANIMATIONS[Math.floor(Math.random() * AUTO_ANIMATIONS.length)];
+      triggerAnimation(randomAnim, 5000);
+    }, 10000);
+    return () => {
+      clearInterval(autoAnimIntervalRef.current);
+      clearTimeout(autoReturnRef.current);
+    };
+  }, [step, triggerAnimation]);
 
   // Validar código de trabajador contra cuadrilla
   const validatePersonnelCode = async (code) => {
@@ -257,8 +334,14 @@ const JoinSession = () => {
     };
     setParticipant(participanteObj);
     localStorage.setItem('quizizz_participant', JSON.stringify(participanteObj));
-    // Registrar en RTDB
-    await push(ref(rtdb, `liveSessions/${sessionId}/participants`), participanteObj);
+    // Registrar en RTDB y guardar key para actualizar animación
+    const pushResult = await push(ref(rtdb, `liveSessions/${sessionId}/participants`), {
+      ...participanteObj,
+      animation: 'idle',
+    });
+    myKeyRef.current = pushResult.key;
+    setMyParticipantKey(pushResult.key);
+    setMyAnimation('idle');
     setStep('lobby');
     setIsJoining(false);
   };
@@ -347,7 +430,13 @@ const JoinSession = () => {
         <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-md flex flex-col items-center backdrop-blur-md border border-purple-400">
           <h2 className="text-2xl font-bold text-purple-200 mb-2 text-center">¿Cómo te llamas?</h2>
           <div className="mb-6">
-            <Avatar3D config={participant.avatarConfig} animation="idle" size="md" interactive={false} />
+            <Avatar3D 
+              config={participant.avatarConfig} 
+              animation="wave" 
+              expression="happy"
+              size="md" 
+              interactive={true} 
+            />
           </div>
           <form
             onSubmit={handleRegisterParticipant}
@@ -379,37 +468,85 @@ const JoinSession = () => {
   // Paso 3: Lobby de espera
   if (step === 'lobby') {
     const puedeEmpezar = sessionData?.status === 'started';
+    const EMOTES = [
+      { anim: 'wave',      label: 'Saludar'  },
+      { anim: 'dance',     label: 'Bailar'   },
+      { anim: 'celebrate', label: 'Celebrar' },
+      { anim: 'thinking',  label: 'Pensar'   },
+      { anim: 'laugh',     label: 'Reírse'   },
+      { anim: 'scratch',   label: 'Rascarse' },
+      { anim: 'jump',      label: 'Saltar'   },
+    ];
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-800 to-black text-white font-sans p-4">
-        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-8 w-full max-w-lg flex flex-col items-center backdrop-blur-md border border-purple-400">
-          <h2 className="text-3xl font-extrabold text-purple-200 mb-4 text-center">¡Bienvenido, {participant.name}!</h2>
-          <div className="w-full flex flex-col items-center mb-6">
-            <p className="text-lg text-purple-100 mb-2">
-              {puedeEmpezar ? '¡El anfitrión ha iniciado la evaluación! Prepárate...' : 'Esperando a que el anfitrión empiece...'}
-            </p>
-            <div className="flex flex-row gap-2 mt-2">
-              <span className="bg-purple-700 px-4 py-2 rounded-full text-lg font-bold tracking-widest text-white shadow">{sessionData?.joinCode}</span>
+        <div className="bg-white bg-opacity-10 rounded-2xl shadow-2xl p-6 w-full max-w-lg flex flex-col items-center backdrop-blur-md border border-purple-400">
+          <h2 className="text-2xl font-extrabold text-purple-200 mb-1 text-center">¡Bienvenido, {participant.name}!</h2>
+          <p className="text-sm text-purple-100 mb-4 text-center">
+            {puedeEmpezar ? '¡El anfitrión ha iniciado la evaluación! Prepárate...' : 'Esperando a que el anfitrión empiece...'}
+          </p>
+
+          {/* Avatar del usuario con botones de emote */}
+          <div className="flex flex-col items-center w-full mb-4">
+            <Avatar3D
+              config={participant.avatarConfig}
+              animation={myAnimation}
+              expression="happy"
+              size="md"
+              interactive={false}
+            />
+            {/* Botones de emote */}
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {EMOTES.map(({ anim, label }) => (
+                <button
+                  key={anim}
+                  onClick={() => triggerAnimation(anim, 5000)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all border
+                    ${myAnimation === anim
+                      ? 'bg-purple-500 border-purple-300 text-white ring-2 ring-white ring-opacity-60'
+                      : 'bg-white bg-opacity-10 border-purple-400 border-opacity-30 hover:bg-purple-600 hover:border-purple-400 text-purple-100'}`}
+                >
+                  {label}
+                </button>
+              ))}
+              {myAnimation !== 'idle' && (
+                <button
+                  onClick={() => { if (autoReturnRef.current) clearTimeout(autoReturnRef.current); updateMyAnimation('idle'); }}
+                  className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-gray-600 hover:bg-gray-500 border border-gray-400 border-opacity-40 text-white transition-all"
+                >
+                  Detener
+                </button>
+              )}
             </div>
           </div>
-          {/* Lista de participantes en el lobby */}
-          <div className="w-full mt-4">
-            <h3 className="text-md text-purple-300 mb-2 text-center">Participantes en la sala:</h3>
-            {participants.length === 0 ? (
-              <div className="text-gray-400 text-center">Nadie se ha unido aún</div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                {participants.map((p, i) => (
-                  <div key={i} className="bg-purple-700/70 rounded-3xl p-4 flex items-center gap-4 shadow-lg">
-                    <Avatar3D config={p.avatarConfig} animation="idle" size="sm" interactive={false} />
-                    <div className="text-left">
-                      <p className="font-semibold text-white">{p.name || `Participante ${i + 1}`}</p>
-                      {p.personnelCode && <p className="text-sm text-gray-300">Código: {p.personnelCode}</p>}
-                    </div>
-                  </div>
-                ))}
+
+          {/* Lista de otros participantes en el lobby */}
+          {(() => {
+            const others = participants.filter(p => p.name !== participant.name);
+            if (others.length === 0) return null;
+            return (
+              <div className="w-full mt-2">
+                <h3 className="text-sm text-purple-300 mb-2 text-center">También en la sala:</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                  {others.map((p, i) => {
+                    const expression = ['happy', 'thinking', 'impressed', 'shocked'][i % 4];
+                    return (
+                      <div key={i} className="rounded-2xl p-3 flex flex-col items-center gap-2 shadow bg-purple-700/70">
+                        <Avatar3D
+                          config={p.avatarConfig}
+                          animation={p.animation || 'idle'}
+                          expression={expression}
+                          size="sm"
+                          interactive={false}
+                        />
+                        <p className="font-semibold text-white text-xs text-center">{p.name || `Participante ${i + 1}`}</p>
+                        {p.personnelCode && <p className="text-xs text-gray-300">Cód: {p.personnelCode}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
         {(remoteCountdown && remoteCountdown > 0) && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50 animate-fadeIn">

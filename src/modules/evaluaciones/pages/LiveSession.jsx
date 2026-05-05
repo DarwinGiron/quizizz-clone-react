@@ -1,7 +1,7 @@
 // LiveSession.jsx actualizado con Realtime Database y Firestore para cargar preguntas
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom'; // Importar useNavigate
-import { ref, onValue, set, update } from 'firebase/database'; // Importar update
+import { ref, onValue, set, update, get } from 'firebase/database'; // Importar update y get
 import { rtdb, db } from '../../../firebase/config'; // Asegúrate de exportar tu RTDB y db (Firestore) en config.js
 import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
 import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
@@ -61,15 +61,44 @@ const LiveSession = () => {
   useEffect(() => {
     // Listener para participantes
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
-    const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
+    const unsubscribeParticipants = onValue(participantsRef, async (snapshot) => {
       const data = snapshot.val();
-      const list = data
-        ? Object.values(data).map((p) => ({
+      if (!data) {
+        setParticipants([]);
+        return;
+      }
+      
+      // Cargar avatares con soporte para Firebase
+      const participantsWithAvatars = await Promise.all(
+        Object.values(data).map(async (p) => {
+          let avatarConfig = p.avatarConfig;
+          
+          // Si no tiene avatarConfig, intentar cargar desde Firebase
+          if (!avatarConfig && p.userId) {
+            try {
+              const avatarRef = ref(rtdb, `avatars/${p.userId}`);
+              const snapshot = await get(avatarRef);
+              if (snapshot.exists()) {
+                avatarConfig = snapshot.val();
+              }
+            } catch (err) {
+              console.log('No se pudo cargar avatar de Firebase:', err);
+            }
+          }
+          
+          // Si aún no hay avatarConfig, generar uno
+          if (!avatarConfig) {
+            avatarConfig = getAvatarConfigForParticipant(p);
+          }
+          
+          return {
             ...p,
-            avatarConfig: p.avatarConfig || getAvatarConfigForParticipant(p),
-          }))
-        : [];
-      setParticipants(list);
+            avatarConfig,
+          };
+        })
+      );
+      
+      setParticipants(participantsWithAvatars);
     });
 
     // Listener para el estado general de la sesión y el joinCode
@@ -262,23 +291,27 @@ const LiveSession = () => {
                 <div className="text-gray-300">Aún no hay participantes en la sala.</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                  {participants.map((p, i) => (
-                    <div
-                      key={i}
-                      className="bg-purple-700/70 rounded-3xl p-4 flex flex-col items-center gap-3 shadow-lg cursor-pointer hover:bg-purple-600 transition"
-                      onClick={() => { setShowDeleteModal(true); setParticipantToDelete(p); }}
-                      title="Eliminar participante"
-                    >
-                      <Avatar3D
-                        config={p.avatarConfig || getAvatarConfigForParticipant(p)}
-                        animation="idle"
-                        size="sm"
-                        interactive={false}
-                      />
-                      <div className="text-white font-semibold">{p.name || `Participante ${i + 1}`}</div>
-                      {p.personnelCode && <div className="text-xs text-gray-300">Cód: {p.personnelCode}</div>}
-                    </div>
-                  ))}
+                  {participants.map((p, i) => {
+                    const expression = ['happy', 'thinking', 'impressed', 'shocked'][i % 4];
+                    return (
+                      <div
+                        key={i}
+                        className="bg-purple-700/70 rounded-3xl p-4 flex flex-col items-center gap-3 shadow-lg cursor-pointer hover:bg-purple-600 transition hover:shadow-xl"
+                        onClick={() => { setShowDeleteModal(true); setParticipantToDelete(p); }}
+                        title="Eliminar participante"
+                      >
+                        <Avatar3D
+                          config={p.avatarConfig || getAvatarConfigForParticipant(p)}
+                          animation={p.animation || 'idle'}
+                          expression={expression}
+                          size="sm"
+                          interactive={false}
+                        />
+                        <div className="text-white font-semibold">{p.name || `Participante ${i + 1}`}</div>
+                        {p.personnelCode && <div className="text-xs text-gray-300">Cód: {p.personnelCode}</div>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

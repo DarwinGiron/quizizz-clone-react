@@ -14,6 +14,7 @@ const Register = () => {
   const [step, setStep] = useState(1); // 1: datos básicos, 2: avatar
   const [avatarConfig, setAvatarConfig] = useState(DEFAULT_AVATAR_CONFIG);
   const [isLoading, setIsLoading] = useState(false);
+  const [userUid, setUserUid] = useState(null);
 
   const handleFirstStep = (e) => {
     e.preventDefault();
@@ -35,11 +36,13 @@ const Register = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // Guardar el uid para usarlo en el AvatarCustomizer
+      setUserUid(user.uid);
 
-      // Aquí guardarías el nombre y avatar en Firestore
+      // Aquí guardarías el nombre en Firestore
       // await saveUserProfile(user.uid, {
       //   userName,
-      //   avatarConfig,
       //   email,
       // });
 
@@ -166,6 +169,7 @@ const Register = () => {
             <AvatarCustomizer
               initialConfig={avatarConfig}
               onAvatarChange={(newConfig) => setAvatarConfig(newConfig)}
+              userId={userUid}
             />
 
             {/* Botones de acción */}
