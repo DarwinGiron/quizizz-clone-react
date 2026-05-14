@@ -13,17 +13,6 @@ const SessionStatsAdmin = () => {
   const navigate = useNavigate();
   const { ranking, questionAnalysis, quizQuestions, sessionData, kpis, participants } = useSessionStats(sessionId, quizId);
 
-  // Ocultar sidebar/layout en el lobby del admin
-  useEffect(() => {
-    document.body.classList.add('bg-black');
-    const mainLayout = document.getElementById('main-layout-sidebar');
-    if (mainLayout) mainLayout.style.display = 'none';
-    return () => {
-      document.body.classList.remove('bg-black');
-      if (mainLayout) mainLayout.style.display = '';
-    };
-  }, []);
-
   // Estado para pestañas y modal
   const [activeTab, setActiveTab] = useState('ranking');
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);

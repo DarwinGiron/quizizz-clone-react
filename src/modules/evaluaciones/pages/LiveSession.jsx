@@ -7,7 +7,6 @@ import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
 import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/config';
-import { Avatar3D, DEFAULT_AVATAR_CONFIG, AVATAR_COLORS, AVATAR_STYLES, AVATAR_ACCESSORIES } from '../../../shared/components/Avatar';
 import ResponseCounter from '../components/ResponseCounter';
 
 const LiveSession = () => {
@@ -32,26 +31,6 @@ const LiveSession = () => {
       .reduce((acc, char) => acc + char.charCodeAt(0), 0);
   };
 
-  const getAvatarConfigForParticipant = (participantData) => {
-    const name = participantData?.name || participantData?.personnelCode || 'Invitado';
-    const seed = Math.abs(hashString(name));
-    const styles = Object.values(AVATAR_STYLES);
-    const style = styles[seed % styles.length];
-    const skin = AVATAR_COLORS.skin[seed % AVATAR_COLORS.skin.length];
-    const hair = AVATAR_COLORS.hair[seed % AVATAR_COLORS.hair.length];
-    const clothes = AVATAR_COLORS.clothes[seed % AVATAR_COLORS.clothes.length];
-    const accessory = AVATAR_ACCESSORIES[seed % AVATAR_ACCESSORIES.length].id;
-
-    return {
-      ...DEFAULT_AVATAR_CONFIG,
-      style: style.id,
-      skinColor: skin,
-      hairColor: hair,
-      clothesColor: clothes,
-      shoesColor: '#333333',
-      accessory,
-    };
-  };
   const [showCountdown, setShowCountdown] = useState(false);
   const [remoteCountdown, setRemoteCountdown] = useState(null);
   const [user, loading] = useAuthState(auth);
@@ -63,12 +42,7 @@ const LiveSession = () => {
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
     const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data
-        ? Object.values(data).map((p) => ({
-            ...p,
-            avatarConfig: p.avatarConfig || getAvatarConfigForParticipant(p),
-          }))
-        : [];
+      const list = data ? Object.values(data) : [];
       setParticipants(list);
     });
 
@@ -269,13 +243,7 @@ const LiveSession = () => {
                       onClick={() => { setShowDeleteModal(true); setParticipantToDelete(p); }}
                       title="Eliminar participante"
                     >
-                      <Avatar3D
-                        config={p.avatarConfig || getAvatarConfigForParticipant(p)}
-                        animation="idle"
-                        size="sm"
-                        interactive={false}
-                      />
-                      <div className="text-white font-semibold">{p.name || `Participante ${i + 1}`}</div>
+                      <div className="text-white font-semibold text-xl">{p.name || `Participante ${i + 1}`}</div>
                       {p.personnelCode && <div className="text-xs text-gray-300">Cód: {p.personnelCode}</div>}
                     </div>
                   ))}

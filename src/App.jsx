@@ -295,9 +295,7 @@ function App() {
           path="/admin/session/:quizId/:sessionId/stats"
           element={
             <PrivateRoute>
-              <MainLayout>
-                <SessionStatsAdmin />
-              </MainLayout>
+              <SessionStatsAdmin />
             </PrivateRoute>
           }
         />
