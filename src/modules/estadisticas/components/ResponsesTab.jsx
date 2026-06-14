@@ -18,8 +18,8 @@ const ResponsesTab = ({ ranking, quizQuestions }) => (
           </tr>
         </thead>
         <tbody>
-          {ranking.map((p) => (
-            <tr key={p.name} className="border-t border-purple-900/50">
+          {ranking.map((p, i) => (
+            <tr key={p.id || `${p.name}-${i}`} className="border-t border-purple-900/50">
               <td className="sticky left-0 bg-gray-800/80 py-4 px-6 font-bold text-purple-200 z-10">{p.name}</td>
               {quizQuestions.map((q, i) => {
                 const answerDetail = p.answerDetails[i];
@@ -29,7 +29,7 @@ const ResponsesTab = ({ ranking, quizQuestions }) => (
                 else cellClass += 'text-gray-500';
                 return (
                   <td key={i} className={cellClass}>
-                    {answerDetail?.status === 'correct' ? '✓' : answerDetail?.status === 'incorrect' ? '✗' : '–'}
+                    {answerDetail?.status === 'correct' ? 'OK' : answerDetail?.status === 'incorrect' ? 'No' : '–'}
                   </td>
                 );
               })}

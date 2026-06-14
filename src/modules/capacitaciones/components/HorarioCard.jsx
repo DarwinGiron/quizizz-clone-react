@@ -1,4 +1,4 @@
-// ✅ HorarioCard.jsx – Tarjeta de horario mejorada
+// HorarioCard.jsx – Tarjeta de horario mejorada
 import React, { useState, useEffect } from "react";
 import { AsignarParticipantesModal } from "../../asignaciones";
 import { collection, getDocs } from "firebase/firestore";

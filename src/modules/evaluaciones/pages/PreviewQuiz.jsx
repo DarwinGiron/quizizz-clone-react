@@ -16,8 +16,6 @@ const PreviewQuiz = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setQuiz(docSnap.data());
-        } else {
-          console.log('No such document!');
         }
       } catch (error) {
         console.error('Error fetching quiz:', error);

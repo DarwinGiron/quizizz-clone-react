@@ -29,7 +29,7 @@ export default function NuevoSupervisorModal({ onClose }) {
 
     await addDoc(collection(db, "usuarios"), form);
 
-    // ✅ Redirige a /usuarios y recarga la página
+    // Redirige a /usuarios y recarga la página
     navigate("/usuarios", { replace: true });
     window.location.reload();
   };

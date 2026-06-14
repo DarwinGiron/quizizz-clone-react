@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Barra de desplazamiento sutil/translúcida en las pantallas inmersivas (sesión en vivo) */
+body.join-immersive {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+body.join-immersive::-webkit-scrollbar {
+  width: 8px;
+}
+body.join-immersive::-webkit-scrollbar-track {
+  background: transparent;
+}
+body.join-immersive::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+body.join-immersive::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
 /* bar flotante custom */
 .bar-float {
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);

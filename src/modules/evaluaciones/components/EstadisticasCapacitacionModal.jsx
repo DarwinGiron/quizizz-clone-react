@@ -119,7 +119,6 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span>📊</span>
               Estadísticas de Capacitación
             </h2>
             <button
@@ -134,7 +133,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
           </p>
           {quiz?.capacitacionVinculada && (
             <p className="text-purple-600 text-sm mt-1">
-              🎓 Vinculada a: {quiz.capacitacionVinculada.titulo}
+              Vinculada a: {quiz.capacitacionVinculada.titulo}
             </p>
           )}
         </div>
@@ -148,7 +147,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <div className="text-red-600 text-4xl mb-4">⚠️</div>
+              <div className="text-red-600 text-4xl mb-4"></div>
               <p className="text-red-600">{error}</p>
             </div>
           ) : estadisticas ? (
@@ -157,7 +156,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-blue-600">👥</span>
+                    <span className="text-blue-600"></span>
                     <span className="text-sm font-medium text-blue-800">Total Participantes</span>
                   </div>
                   <p className="text-2xl font-bold text-blue-900">{estadisticas.totalParticipantes}</p>
@@ -165,7 +164,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
                 
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-green-600">✅</span>
+                    <span className="text-green-600"></span>
                     <span className="text-sm font-medium text-green-800">Asignados</span>
                   </div>
                   <p className="text-2xl font-bold text-green-900">{estadisticas.participantesAsignados}</p>
@@ -173,7 +172,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
                 
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-orange-600">⏰</span>
+                    <span className="text-orange-600"></span>
                     <span className="text-sm font-medium text-orange-800">Fuera de Horario</span>
                   </div>
                   <p className="text-2xl font-bold text-orange-900">{estadisticas.participantesFueraHorario}</p>
@@ -184,7 +183,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
                 
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-purple-600">📊</span>
+                    <span className="text-purple-600"></span>
                     <span className="text-sm font-medium text-purple-800">Sesiones</span>
                   </div>
                   <p className="text-2xl font-bold text-purple-900">{estadisticas.totalSesiones}</p>
@@ -195,7 +194,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <span>🔥</span>
+                    <span></span>
                     Horarios Más Concurridos
                   </h3>
                   <div className="space-y-2">
@@ -210,7 +209,6 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
                 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <span>🔽</span>
                     Horarios Menos Concurridos
                   </h3>
                   <div className="space-y-2">
@@ -227,7 +225,6 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
               {/* Participación por Fecha */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span>📅</span>
                   Participación por Fecha
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -243,7 +240,6 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
               {/* Insights */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h3 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
-                  <span>💡</span>
                   Insights
                 </h3>
                 <ul className="space-y-1 text-sm text-yellow-700">
@@ -256,7 +252,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <div className="text-gray-400 text-4xl mb-4">📊</div>
+              <div className="text-gray-400 text-4xl mb-4"></div>
               <p className="text-gray-600">No hay datos suficientes para mostrar estadísticas</p>
             </div>
           )}

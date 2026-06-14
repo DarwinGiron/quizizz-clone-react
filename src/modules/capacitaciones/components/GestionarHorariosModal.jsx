@@ -97,13 +97,13 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
 
   const getTextoEstado = (estado) => {
     switch (estado) {
-      case 'deshabilitado': return '🚫 Deshabilitado';
-      case 'completo': return '🔴 Completo';
-      case 'casi-lleno': return '🟠 Casi lleno';
-      case 'medio': return '🟡 Medio lleno';
-      case 'con-asignados': return '🔵 Con asignados';
-      case 'vacio': return '🟢 Disponible';
-      default: return '⚪ Desconocido';
+      case 'deshabilitado': return 'Deshabilitado';
+      case 'completo': return 'Completo';
+      case 'casi-lleno': return 'Casi lleno';
+      case 'medio': return 'Medio lleno';
+      case 'con-asignados': return 'Con asignados';
+      case 'vacio': return 'Disponible';
+      default: return 'Desconocido';
     }
   };
 
@@ -182,7 +182,7 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
             </div>
           ) : Object.keys(bloquesAgrupados).length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-4xl mb-4">📅</div>
+              <div className="text-4xl mb-4"></div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 No hay horarios configurados
               </h3>
@@ -195,7 +195,7 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
               {Object.entries(bloquesAgrupados).map(([fecha, bloquesDelDia]) => (
                 <div key={fecha} className="bg-white border border-gray-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    📅 {format(parseISO(fecha), 'EEEE, dd MMMM yyyy', { locale: es })}
+                    {format(parseISO(fecha), 'EEEE, dd MMMM yyyy', { locale: es })}
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -213,7 +213,7 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
                           {/* Header del bloque */}
                           <div className="flex justify-between items-center mb-2">
                             <div className="font-semibold text-sm">
-                              ⏰ {bloque.hora_inicio} - {bloque.hora_fin}
+                              {bloque.hora_inicio} - {bloque.hora_fin}
                             </div>
                             <div className="text-xs font-medium">
                               {ocupados}/{total}
@@ -277,7 +277,7 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
         <div className="p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              💡 Los horarios deshabilitados no aparecerán en la interfaz de asignación
+              Los horarios deshabilitados no aparecerán en la interfaz de asignación
             </div>
             <button
               onClick={onClose}

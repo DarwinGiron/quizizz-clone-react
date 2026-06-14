@@ -62,10 +62,10 @@ const AvatarGallery = () => {
               whileTap={{ scale: 0.95 }}
             >
               {anim === 'idle' && '🧍'}
-              {anim === 'wave' && '👋'}
-              {anim === 'dance' && '🕺'}
-              {anim === 'celebrate' && '🎉'}
-              {anim === 'thinking' && '🤔'}
+              {anim === 'wave' && ''}
+              {anim === 'dance' && ''}
+              {anim === 'celebrate' && ''}
+              {anim === 'thinking' && ''}
               {' '}
               {anim.charAt(0).toUpperCase() + anim.slice(1)}
             </motion.button>
@@ -129,7 +129,7 @@ const AvatarGallery = () => {
           variants={itemVariants}
         >
           <p className="text-sm">
-            💡 Los avatares son totalmente interactivos. Mueve el mouse sobre ellos para ver el efecto 3D
+            Los avatares son totalmente interactivos. Mueve el mouse sobre ellos para ver el efecto 3D
           </p>
         </motion.div>
       </motion.div>

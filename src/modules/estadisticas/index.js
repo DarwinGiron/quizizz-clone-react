@@ -7,4 +7,11 @@ export { default as SessionStatsAdmin } from './pages/SessionStatsAdmin';
 
 // Componentes
 export { default as SessionStats } from './components/SessionStats';
-export { default as ExportStatsModal } from './components/ExportStatsModal';
+
+// Hooks
+export { default as useSessionStats } from './hooks/useSessionStats';
+export { default as useSessionReport, processSessionData, fetchSessionFeedback } from './hooks/useSessionReport';
+
+// Utils
+export * from './utils/exportReport';
+export * from './utils/finalizeSession';

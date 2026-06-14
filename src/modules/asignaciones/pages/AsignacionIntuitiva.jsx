@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   collection, getDocs, query, where, doc, updateDoc, arrayUnion, arrayRemove, getDoc
 } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import { auth, db } from '../../../firebase/config';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BackButton } from '../../../shared';
+import { Users, UserCircle, Calendar, GripVertical, Lightbulb } from 'lucide-react';
 
 export default function AsignacionIntuitiva() {
   const { capacitacionId } = useParams();
@@ -444,12 +445,6 @@ export default function AsignacionIntuitiva() {
         return nuevasCuadrillas;
       });
 
-      // Mostrar mensaje de éxito
-      const codigoPersonal = draggedPerson.codigo || draggedPerson.codigoPersonal;
-      const identificador = codigoPersonal ? `${codigoPersonal} - ${draggedPerson.nombre}` : draggedPerson.nombre;
-      console.log(`✅ ${identificador} asignado al horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
-      
-      // Forzar re-render
       setForceUpdate(prev => prev + 1);
 
     } catch (error) {
@@ -515,7 +510,6 @@ export default function AsignacionIntuitiva() {
           }
           return b;
         });
-        console.log('🔄 Bloques actualizados:', nuevosBloque.find(b => b.id === bloque.id)?.participantes?.length || 0);
         return nuevosBloque;
       });
 
@@ -527,9 +521,7 @@ export default function AsignacionIntuitiva() {
           nuevasCuadrillas[supervisorId] = nuevasCuadrillas[supervisorId].filter(p => p.id !== personaEncontrada.id);
           const personalDespues = nuevasCuadrillas[supervisorId].length;
           
-          if (personalAntes !== personalDespues) {
-            console.log(`🔄 Cuadrilla ${supervisorId}: ${personalAntes} → ${personalDespues} personas`);
-          }
+          // no-op: diff tracked internally
         });
         return nuevasCuadrillas;
       });
@@ -539,23 +531,9 @@ export default function AsignacionIntuitiva() {
       setBloqueSeleccionado(null);
       setMostrarInputCodigo(false);
 
-      // Mostrar mensaje de éxito
-      const codigoPersonal = personaEncontrada.codigo || personaEncontrada.codigoPersonal;
-      const identificador = codigoPersonal ? `${codigoPersonal} - ${personaEncontrada.nombre}` : personaEncontrada.nombre;
-      console.log(`✅ ${identificador} asignado al horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
-      
-      // Forzar re-render del componente
-      console.log('🔄 Forzando actualización del estado...');
-      
-      // Pequeño delay para asegurar que el estado se actualice
       setTimeout(() => {
-        console.log('🔍 Verificando estado después de asignación:');
-        console.log('- Persona asignada:', estaAsignado(personaEncontrada.id));
-        console.log('- Bloques actualizados:', bloques.length);
-        
-        // Forzar re-render completo
-        setVistaActual(prev => prev); // Trigger re-render
-        setForceUpdate(prev => prev + 1); // Forzar actualización
+        setVistaActual(prev => prev);
+        setForceUpdate(prev => prev + 1);
       }, 100);
 
     } catch (error) {
@@ -621,12 +599,6 @@ export default function AsignacionIntuitiva() {
         });
       }
 
-      // Mostrar mensaje de éxito
-      const codigoPersonal = participante.codigo || participante.codigoPersonal;
-      const identificador = codigoPersonal ? `${codigoPersonal} - ${participante.nombre}` : participante.nombre;
-      console.log(`✅ ${identificador} desasignado del horario ${bloque.hora_inicio} - ${bloque.hora_fin}`);
-      
-      // Forzar re-render
       setForceUpdate(prev => prev + 1);
 
     } catch (error) {
@@ -652,7 +624,7 @@ export default function AsignacionIntuitiva() {
       <div className="flex">
         <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
             <p className="text-gray-600">Cargando sistema de asignaciones...</p>
           </div>
         </div>
@@ -668,7 +640,7 @@ export default function AsignacionIntuitiva() {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            📋 Asignación Intuitiva de Personal
+            Asignación Intuitiva de Personal
           </h1>
           {capacitacion && (
             <p className="text-gray-600 mb-4">
@@ -688,7 +660,7 @@ export default function AsignacionIntuitiva() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                📅 Vista Día
+                Vista Día
               </button>
               <button
                 onClick={() => setVistaActual('semana')}
@@ -698,13 +670,13 @@ export default function AsignacionIntuitiva() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                📆 Vista Semana
+                Vista Semana
               </button>
             </div>
 
             {/* Filtro por área */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">📍 Área:</label>
+              <label className="text-sm font-medium text-gray-700">Área:</label>
               <select
                 value={filtroArea}
                 onChange={(e) => setFiltroArea(e.target.value)}
@@ -719,7 +691,7 @@ export default function AsignacionIntuitiva() {
 
             {/* Filtro por máquina/equipo */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">🔧 Equipo:</label>
+              <label className="text-sm font-medium text-gray-700">Equipo:</label>
               <select
                 value={filtroMaquina}
                 onChange={(e) => setFiltroMaquina(e.target.value)}
@@ -734,7 +706,7 @@ export default function AsignacionIntuitiva() {
 
             {/* Filtro por disponibilidad */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">👥 Mostrar:</label>
+              <label className="text-sm font-medium text-gray-700">Mostrar:</label>
               <select
                 value={filtroDisponibilidad}
                 onChange={(e) => setFiltroDisponibilidad(e.target.value)}
@@ -756,7 +728,7 @@ export default function AsignacionIntuitiva() {
                 }}
                 className="px-3 py-1 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600 transition"
               >
-                🗑️ Limpiar filtros
+                Limpiar filtros
               </button>
             )}
           </div>
@@ -768,7 +740,7 @@ export default function AsignacionIntuitiva() {
             <div className="bg-white rounded-lg shadow-sm p-4 sticky top-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                  👥 Personal
+                  Personal
                   <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                     {getTotalPersonalVisible()}
                   </span>
@@ -781,8 +753,8 @@ export default function AsignacionIntuitiva() {
                   </span>
                   <button
                     onClick={() => setMostrarCuadrillaCompleta(!mostrarCuadrillaCompleta)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                      mostrarCuadrillaCompleta ? 'bg-purple-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                      mostrarCuadrillaCompleta ? 'bg-indigo-600' : 'bg-gray-200'
                     }`}
                   >
                     <span
@@ -835,7 +807,7 @@ export default function AsignacionIntuitiva() {
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {supervisores.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
-                    <div className="text-lg mb-2">👤</div>
+                    <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                     <div className="text-sm">No hay supervisores disponibles</div>
                     <div className="text-xs mt-1">
                       Rol actual: {usuarioActual?.rol || 'Sin rol'} | 
@@ -852,10 +824,9 @@ export default function AsignacionIntuitiva() {
                     <div key={supervisor.id} className="border border-gray-200 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center">
-                          <span className="text-lg mr-2">
-                            {supervisor.tipo === 'auth' ? '👑' : 
-                             supervisor.tipo === 'ejemplo' ? '�' : '👨‍💼'}
-                          </span>
+                          <div className="bg-indigo-100 p-1.5 rounded-lg mr-2">
+                            <UserCircle className="w-4 h-4 text-indigo-600" />
+                          </div>
                           <div>
                             <div className="text-sm font-medium text-purple-700">
                               {supervisor.nombre}
@@ -913,11 +884,11 @@ export default function AsignacionIntuitiva() {
                                   </div>
                                   <div className="ml-2">{yaAsignado ? (
                                       <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full font-medium">
-                                        ✅
+                                        OK
                                       </span>
                                     ) : (
-                                      <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full font-medium">
-                                        🖱️
+                                      <span className="text-xs bg-blue-200 text-blue-800 p-1 rounded-full font-medium inline-flex items-center justify-center">
+                                        <GripVertical className="w-3 h-3" />
                                       </span>
                                     )}
                                   </div>
@@ -934,7 +905,7 @@ export default function AsignacionIntuitiva() {
                 
                 {supervisores.length === 0 && (
                   <div className="text-center py-8 text-gray-400">
-                    <div className="text-3xl mb-2">👤</div>
+                    <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                     <div className="text-sm">No tienes acceso a supervisores</div>
                   </div>
                 )}
@@ -949,7 +920,7 @@ export default function AsignacionIntuitiva() {
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    📆 Semana del {format(getDiasSemana()[0], 'dd MMM', { locale: es })} - {format(getDiasSemana()[6], 'dd MMM yyyy', { locale: es })}
+                    Semana del {format(getDiasSemana()[0], 'dd MMM', { locale: es })} - {format(getDiasSemana()[6], 'dd MMM yyyy', { locale: es })}
                   </h2>
                   <div className="flex gap-2">
                     <button
@@ -997,7 +968,7 @@ export default function AsignacionIntuitiva() {
                               >
                                 <div className="flex items-center justify-between mb-1">
                                   <div className="text-xs font-medium text-gray-700">
-                                    ⏰ {bloque.hora_inicio} - {bloque.hora_fin}
+                                    {bloque.hora_inicio} - {bloque.hora_fin}
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     {ocupados}/{bloque.cupo_disponible}
@@ -1038,13 +1009,13 @@ export default function AsignacionIntuitiva() {
                                 {/* Estado visual */}
                                 {estaLleno && (
                                   <div className="text-xs text-center mt-2 text-red-600 font-medium">
-                                    🚫 Completo
+                                    Completo
                                   </div>
                                 )}
                                 
                                 {!estaLleno && draggedPerson && (
                                   <div className="text-xs text-center mt-2 text-purple-600 font-medium">
-                                    ⬇️ Suelta aquí
+                                    Suelta aquí
                                   </div>
                                 )}
                               </div>
@@ -1067,7 +1038,7 @@ export default function AsignacionIntuitiva() {
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    📅 {format(fechaSeleccionada, 'EEEE, dd MMMM yyyy', { locale: es })}
+                    {format(fechaSeleccionada, 'EEEE, dd MMMM yyyy', { locale: es })}
                   </h2>
                   <div className="flex gap-2">
                     <button
@@ -1112,7 +1083,7 @@ export default function AsignacionIntuitiva() {
                         {/* Header del bloque */}
                         <div className="flex items-center justify-between mb-3">
                           <div className="text-sm font-bold text-gray-800">
-                            ⏰ {bloque.hora_inicio} - {bloque.hora_fin}
+                            {bloque.hora_inicio} - {bloque.hora_fin}
                           </div>
                           <div className="text-sm font-medium text-gray-600">
                             {ocupados}/{bloque.cupo_disponible}
@@ -1148,7 +1119,7 @@ export default function AsignacionIntuitiva() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">
-                                      ✅
+                                      Asignado
                                     </span>
                                     <button
                                       onClick={(e) => {
@@ -1168,7 +1139,7 @@ export default function AsignacionIntuitiva() {
                             ))
                           ) : (
                             <div className="text-center py-6 text-gray-400">
-                              <div className="text-2xl mb-2">👥</div>
+                              <Users className="w-6 h-6 text-gray-300 mx-auto mb-2" />
                               <div className="text-sm">Sin personal asignado</div>
                             </div>
                           )}
@@ -1177,16 +1148,16 @@ export default function AsignacionIntuitiva() {
                         {/* Estado del bloque */}
                         {estaLleno ? (
                           <div className="text-center py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium">
-                            🚫 Bloque completo
+                            Bloque completo
                           </div>
                         ) : draggedPerson ? (
                           <div className="text-center py-2 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
-                            ⬇️ Suelta aquí para asignar
+                            Suelta aquí para asignar
                           </div>
                         ) : (
                           <div className="space-y-3">
                             <div className="text-center py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
-                              🖱️ Arrastra personal aquí
+                              Arrastra personal aquí
                             </div>
                             <div className="text-center text-gray-400 text-xs">o</div>
                             <div className="space-y-2">
@@ -1220,7 +1191,7 @@ export default function AsignacionIntuitiva() {
                                 disabled={!codigoPersonal.trim() || bloqueSeleccionado !== bloque.id}
                                 className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                               >
-                                ➕ Asignar por código
+                                Asignar por código
                               </button>
                             </div>
                           </div>
@@ -1231,7 +1202,11 @@ export default function AsignacionIntuitiva() {
                   
                   {getBloquesDelDia(fechaSeleccionada).length === 0 && (
                     <div className="col-span-full text-center py-12 text-gray-400">
-                      <div className="text-4xl mb-4">📅</div>
+                      <div className="flex justify-center mb-4">
+                        <div className="bg-indigo-100 p-4 rounded-full">
+                          <Calendar className="w-10 h-10 text-indigo-600" />
+                        </div>
+                      </div>
                       <h3 className="text-lg font-medium mb-2">No hay horarios programados</h3>
                       <p className="text-sm">No se encontraron bloques de capacitación para este día.</p>
                     </div>
@@ -1246,7 +1221,7 @@ export default function AsignacionIntuitiva() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           {/* Leyenda de uso */}
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">📖 Guía de uso:</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Guía de uso:</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-blue-100 border-2 border-blue-400 rounded flex-shrink-0"></div>
@@ -1254,7 +1229,7 @@ export default function AsignacionIntuitiva() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-100 border-2 border-green-400 rounded flex-shrink-0"></div>
-                <span>Personal asignado (verde) - Pasa el cursor para desasignar ❌</span>
+                <span>Personal asignado (verde) - Pasa el cursor para desasignar</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-50 border border-green-200 rounded flex-shrink-0"></div>
@@ -1274,7 +1249,7 @@ export default function AsignacionIntuitiva() {
               </div>
               <div className="bg-blue-50 p-3 rounded-lg mt-3 border border-blue-200">
                 <div className="flex items-center gap-2 text-blue-800">
-                  <span className="text-lg">💡</span>
+                  <Lightbulb className="w-4 h-4 text-blue-600" />
                   <span className="font-medium">Consejos:</span>
                 </div>
                 <div className="text-blue-700 text-xs mt-1 space-y-1">
@@ -1288,7 +1263,7 @@ export default function AsignacionIntuitiva() {
 
           {/* Estadísticas generales */}
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">📊 Estadísticas de asignación:</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Estadísticas de asignación:</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="bg-blue-50 p-3 rounded-lg">
                 <div className="text-blue-600 font-semibold text-lg">

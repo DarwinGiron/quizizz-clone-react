@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { format, addMinutes, isBefore, parse } from 'date-fns';
+import { GraduationCap } from 'lucide-react';
 import { BackButton } from '../../../shared';
 import { CalendarioRango } from '../components';
 
@@ -128,7 +129,7 @@ const CreateCapacitacion = () => {
 
       navigate('/capacitaciones');
     } catch (error) {
-      console.error('❌ Error al crear capacitación:', error);
+      console.error('Error al crear capacitación:', error);
       alert('Error al crear la capacitación.');
     } finally {
       setLoading(false);
@@ -138,13 +139,23 @@ const CreateCapacitacion = () => {
   return (
     <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
       <BackButton to="/capacitaciones" label="Volver a Capacitaciones" className="mb-4" />
-      <h2 className="text-2xl font-bold mb-4">Nueva Capacitación</h2>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-indigo-100 p-2.5 rounded-lg">
+          <GraduationCap className="w-6 h-6 text-indigo-600" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Nueva Capacitación</h2>
+          <p className="text-sm text-gray-500">
+            Define las fechas, horarios y cupos de la capacitación.
+          </p>
+        </div>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           {/* Sección de fechas con calendario mejorado */}
           <div className="bg-gray-50 p-4 rounded-lg border">
             <div className="mb-3">
-              <h3 className="text-lg font-semibold text-gray-800">📅 Seleccionar Fechas</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Seleccionar Fechas</h3>
               <p className="text-sm text-gray-600 mt-1">
                 Haz clic en las fechas para seleccionar el rango de la capacitación. 
                 Las fechas ocupadas se muestran con el nombre del evento.
@@ -183,7 +194,7 @@ const CreateCapacitacion = () => {
             name="titulo"
             value={form.titulo}
             placeholder="Título de la capacitación"
-            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             onChange={handleChange}
             required
           />
@@ -196,7 +207,7 @@ const CreateCapacitacion = () => {
             value={form.descripcion}
             placeholder="Descripción de la capacitación"
             rows={4}
-            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             onChange={handleChange}
             required
           />
@@ -233,7 +244,7 @@ const CreateCapacitacion = () => {
             <input
               type="time"
               name="horaInicioDia"
-              defaultValue="08:00"
+              value={form.horaInicioDia}
               className="w-full p-2 border rounded-lg"
               onChange={handleChange}
             />
@@ -243,7 +254,7 @@ const CreateCapacitacion = () => {
             <input
               type="time"
               name="horaFinDia"
-              defaultValue="17:00"
+              value={form.horaFinDia}
               className="w-full p-2 border rounded-lg"
               onChange={handleChange}
             />
@@ -289,12 +300,11 @@ const CreateCapacitacion = () => {
         <button
           type="submit"
           disabled={loading}
-          className={`px-6 py-2 rounded text-white ${
-            loading
-              ? 'bg-purple-400 cursor-not-allowed'
-              : 'bg-purple-600 hover:bg-purple-700'
-          }`}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-white font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg transition-shadow disabled:opacity-60 disabled:cursor-not-allowed"
         >
+          {loading && (
+            <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          )}
           {loading ? 'Creando...' : 'Crear Capacitación'}
         </button>
       </form>

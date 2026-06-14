@@ -13,8 +13,8 @@ const QuestionsTab = ({ questionAnalysis }) => (
             <th className="py-3 px-6 font-semibold text-center">#</th>
             <th className="py-3 px-6 font-semibold">Pregunta</th>
             <th className="py-3 px-6 font-semibold text-center">Precisión</th>
-            <th className="py-3 px-6 font-semibold text-center">✓</th>
-            <th className="py-3 px-6 font-semibold text-center">✗</th>
+            <th className="py-3 px-6 font-semibold text-center">Correctas</th>
+            <th className="py-3 px-6 font-semibold text-center">Incorrectas</th>
           </tr>
         </thead>
         <tbody>

@@ -40,7 +40,7 @@ export default function ImportarCuadrillaModal({ supervisorId, onClose, onImport
         const esVacante = nombre?.toLowerCase().includes("vacante");
 
         if (!nombre || !area) {
-          errores.push(`❌ Fila ${i + 2}: datos incompletos`);
+          errores.push(`Fila ${i + 2}: datos incompletos`);
           continue;
         }
 
@@ -54,14 +54,14 @@ export default function ImportarCuadrillaModal({ supervisorId, onClose, onImport
           });
           importados++;
         } catch (error) {
-          errores.push(`❌ Fila ${i + 2}: error al guardar`);
+          errores.push(`Fila ${i + 2}: error al guardar`);
         }
       }
 
       if (errores.length > 0) {
-        alert(`⚠️ ${importados} importados.\n\nErrores:\n${errores.join("\n")}`);
+        alert(`${importados} importados.\n\nErrores:\n${errores.join("\n")}`);
       } else {
-        alert(`✅ ${importados} miembros importados correctamente.`);
+        alert(`${importados} miembros importados correctamente.`);
       }
 
       onImportado();

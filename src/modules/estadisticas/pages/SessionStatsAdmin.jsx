@@ -11,11 +11,18 @@ import ResponsesTab from '../components/ResponsesTab';
 const SessionStatsAdmin = () => {
   const { quizId, sessionId } = useParams();
   const navigate = useNavigate();
-  const { ranking, questionAnalysis, quizQuestions, sessionData, kpis, participants } = useSessionStats(sessionId, quizId);
+  const { ranking, questionAnalysis, quizQuestions, quizTitle, sessionData, kpis, participants } = useSessionStats(sessionId, quizId);
 
   // Estado para pestañas y modal
   const [activeTab, setActiveTab] = useState('ranking');
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
+
+  // Si la sesión ya se cerró (desde aquí u otra pestaña), salir del panel en vivo
+  useEffect(() => {
+    if (sessionData?.status === 'finished' || sessionData?.status === 'cancelled') {
+      navigate('/myquizzes', { replace: true });
+    }
+  }, [sessionData?.status, navigate]);
 
   // Función para terminar sesión
   const handleEndSession = async () => {
@@ -26,9 +33,19 @@ const SessionStatsAdmin = () => {
     }
 
     try {
+      // Mapa de datos de cada participante (código y cargo/área) por nombre
+      const infoByName = {};
+      participants.forEach((p) => {
+        infoByName[p.name] = {
+          personnelCode: p.personnelCode || null,
+          cargo: p.cargo || p.area || null,
+        };
+      });
+
       const sessionStats = {
         sessionId,
         quizId: finalQuizId,
+        quizTitle: quizTitle || null,
         joinCode: sessionData?.joinCode || null,
         startedAt: sessionData?.createdAt || Date.now(),
         finishedAt: Date.now(),
@@ -40,7 +57,10 @@ const SessionStatsAdmin = () => {
         },
         ranking: ranking.map(p => ({
           name: p.name,
+          personnelCode: infoByName[p.name]?.personnelCode || null,
+          cargo: infoByName[p.name]?.cargo || null,
           score: p.score,
+          correct: p.correct,
           incorrect: p.incorrect,
           finished: p.finished,
           total: p.total,
@@ -61,10 +81,31 @@ const SessionStatsAdmin = () => {
           options: q.options,
           correctAnswer: q.correctAnswer,
         })),
+        // Detalle: respuesta de cada participante a cada pregunta (para la hoja "Preguntas")
+        detailedAnswers: ranking.map(p => ({
+          name: p.name,
+          personnelCode: infoByName[p.name]?.personnelCode || null,
+          cargo: infoByName[p.name]?.cargo || null,
+          answers: quizQuestions.map((q, idx) => {
+            const ans = Array.isArray(p.answers) ? p.answers[idx] : null;
+            const selectedIndex =
+              ans && typeof ans.answer === 'number' ? ans.answer : null;
+            const selectedText =
+              selectedIndex !== null && Array.isArray(q.options)
+                ? q.options[selectedIndex] ?? null
+                : null;
+            return {
+              selectedIndex,
+              selectedText,
+              status: p.answerDetails?.[idx]?.status || 'unanswered',
+            };
+          }),
+        })),
         participants: participants.map(p => ({
           name: p.name,
           type: p.type || 'casual',
           personnelCode: p.personnelCode || null,
+          cargo: p.cargo || p.area || null,
         })),
       };
 
@@ -74,7 +115,7 @@ const SessionStatsAdmin = () => {
       const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
       await update(sessionRef, { status: 'finished' });
 
-      navigate('/my-quizzes');
+      navigate('/myquizzes');
     } catch (error) {
       console.error('Error finishing session:', error);
       alert('Error al terminar la sesión.');
@@ -88,7 +129,7 @@ const SessionStatsAdmin = () => {
         <header className="mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-purple-300">Panel de Sesión en Vivo</h1>
+              <h1 className="text-3xl font-bold text-purple-300">{quizTitle || 'Panel de Sesión en Vivo'}</h1>
               <p className="text-purple-100">Monitoriza el progreso de los participantes en tiempo real.</p>
             </div>
             <div className="flex items-center gap-6">
@@ -109,24 +150,20 @@ const SessionStatsAdmin = () => {
           </div>
         </header>
 
-        {/* Tarjetas de Métricas (KPIs) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800/50 border border-purple-500/30 rounded-2xl p-6 flex flex-col justify-between shadow-lg backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-gray-300">Participantes</h3>
-            <p className="text-4xl font-extrabold text-white">{kpis.totalParticipants}</p>
+        <div className="bg-gray-800/60 border border-purple-500/30 rounded-2xl p-6 mb-8 shadow-lg">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-gray-400 mb-2">Precisión de la clase</p>
+              <h2 className="text-2xl font-bold text-white">{kpis.totalPrecision.toFixed(1)}%</h2>
+            </div>
           </div>
-          <div className="bg-gray-800/50 border border-purple-500/30 rounded-2xl p-6 flex flex-col justify-between shadow-lg backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-gray-300">Precisión Media</h3>
-            <p className="text-4xl font-extrabold text-blue-400">{kpis.totalPrecision.toFixed(1)}%</p>
+
+          <div className="mt-6 bg-gray-700 rounded-full h-4 overflow-hidden border border-purple-500/30 shadow-inner">
+            <div className="h-full bg-emerald-400 transition-all duration-500"
+              style={{ width: `${Math.min(Math.max(kpis.totalPrecision, 0), 100)}%` }}
+            />
           </div>
-          <div className="bg-gray-800/50 border border-purple-500/30 rounded-2xl p-6 flex flex-col justify-between shadow-lg backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-gray-300">Puntaje Promedio</h3>
-            <p className="text-4xl font-extrabold text-green-400">{kpis.averageScore.toFixed(1)}</p>
-          </div>
-          <div className="bg-gray-800/50 border border-purple-500/30 rounded-2xl p-6 flex flex-col justify-between shadow-lg backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-gray-300">Finalizados</h3>
-            <p className="text-4xl font-extrabold text-yellow-400">{kpis.finishedCount} <span className="text-2xl text-gray-400">de {kpis.totalParticipants}</span></p>
-          </div>
+          <div className="mt-3 text-sm text-gray-400">Precisión de la clase.</div>
         </div>
 
         {/* Pestañas de Navegación */}
@@ -175,7 +212,6 @@ const SessionStatsAdmin = () => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log('[DEBUG] Usuario hizo clic en terminar sesión');
                     setShowEndSessionModal(false);
                     handleEndSession();
                   }}

@@ -7,6 +7,7 @@ const useSessionStats = (sessionId, quizId) => {
   const [participants, setParticipants] = useState([]);
   const [answers, setAnswers] = useState({});
   const [quizQuestions, setQuizQuestions] = useState([]);
+  const [quizTitle, setQuizTitle] = useState('');
   const [sessionData, setSessionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,7 +48,9 @@ const useSessionStats = (sessionId, quizId) => {
         const quizRef = doc(db, 'quizzes', quizId);
         const quizSnap = await getDoc(quizRef);
         if (quizSnap.exists()) {
-          setQuizQuestions(quizSnap.data().questions || []);
+          const quizData = quizSnap.data();
+          setQuizQuestions(quizData.questions || []);
+          setQuizTitle(quizData.title || quizData.name || '');
         }
       } catch (err) {
         setError('Error loading quiz');
@@ -61,7 +64,8 @@ const useSessionStats = (sessionId, quizId) => {
   const ranking = useMemo(() => {
     return participants
       .map((p) => {
-        const userAnswers = Array.isArray(answers[p.name]) ? answers[p.name] : [];
+        const answerKey = p.id || p.name;
+        const userAnswers = Array.isArray(answers[answerKey]) ? answers[answerKey] : [];
         let correct = 0;
         let incorrect = 0;
 
@@ -82,10 +86,14 @@ const useSessionStats = (sessionId, quizId) => {
         const finished = answerDetails.every(ad => ad.status !== 'unanswered');
         const answeredCount = answerDetails.filter(ad => ad.status !== 'unanswered').length;
         const totalTime = answerDetails.reduce((sum, ad) => sum + (ad.time || 0), 0);
+        const totalScore = userAnswers.reduce((sum, ans) => sum + (ans?.score || 0), 0);
+        const precision = quizQuestions.length > 0 ? (correct / quizQuestions.length) * 100 : 0;
 
         return {
+          id: p.id || p.name,
           name: p.name,
-          score: correct,
+          score: totalScore,
+          correct,
           incorrect,
           finished,
           total: quizQuestions.length,
@@ -93,6 +101,7 @@ const useSessionStats = (sessionId, quizId) => {
           answerDetails,
           answeredCount,
           totalTime,
+          precision,
         };
       })
       .sort((a, b) => b.score - a.score || a.totalTime - b.totalTime);
@@ -128,8 +137,8 @@ const useSessionStats = (sessionId, quizId) => {
     const averageScore = totalParticipants > 0
       ? ranking.reduce((acc, p) => acc + p.score, 0) / totalParticipants
       : 0;
-    const totalPrecision = totalParticipants > 0 && quizQuestions.length > 0
-      ? (ranking.reduce((acc, p) => acc + (p.total > 0 ? (p.score / p.total) : 0), 0) / totalParticipants) * 100
+    const totalPrecision = totalParticipants > 0
+      ? ranking.reduce((acc, p) => acc + p.precision, 0) / totalParticipants
       : 0;
 
     return {
@@ -138,13 +147,14 @@ const useSessionStats = (sessionId, quizId) => {
       averageScore,
       totalPrecision,
     };
-  }, [ranking, quizQuestions]);
+  }, [ranking]);
 
   return {
     participants,
     ranking,
     questionAnalysis,
     quizQuestions,
+    quizTitle,
     sessionData,
     kpis,
     loading,

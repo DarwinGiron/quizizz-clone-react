@@ -1,36 +1,27 @@
-// LiveSession.jsx actualizado con Realtime Database y Firestore para cargar preguntas
+// LiveSession.jsx — pantalla de host/admin para la sesión en vivo
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Importar useNavigate
-import { ref, onValue, set, update } from 'firebase/database'; // Importar update
-import { rtdb, db } from '../../../firebase/config'; // Asegúrate de exportar tu RTDB y db (Firestore) en config.js
-import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc
-import { QRCodeCanvas } from 'qrcode.react'; // Asegúrate de tener qrcode.react instalado
+import { useParams, useNavigate } from 'react-router-dom';
+import { ref, onValue, set, update } from 'firebase/database';
+import { rtdb, db } from '../../../firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/config';
 import ResponseCounter from '../components/ResponseCounter';
 
 const LiveSession = () => {
   const { quizId, sessionId } = useParams();
-  const navigate = useNavigate(); // Inicializar useNavigate
+  const navigate = useNavigate();
   const [participants, setParticipants] = useState([]);
   const [showQR, setShowQR] = useState(false);
-  const [sessionStatus, setSessionStatus] = useState('waiting'); // Estado de la sesión
-  const [sessionJoinCode, setSessionJoinCode] = useState(null); // Estado para el código de unión de la sesión
-  const [quizQuestions, setQuizQuestions] = useState([]); // Estado para las preguntas del quiz
+  const [sessionStatus, setSessionStatus] = useState('waiting');
+  const [sessionJoinCode, setSessionJoinCode] = useState(null);
+  const [quizQuestions, setQuizQuestions] = useState([]);
   const [localJoinCode, setLocalJoinCode] = useState(null);
   const [joinCodeTimeout, setJoinCodeTimeout] = useState(false);
-  // Estado para el modal de eliminación
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [participantToDelete, setParticipantToDelete] = useState(null);
-  // Estado para cuenta regresiva
   const [countdown, setCountdown] = useState(null);
-
-  const hashString = (text) => {
-    return String(text || '')
-      .split('')
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  };
-
   const [showCountdown, setShowCountdown] = useState(false);
   const [remoteCountdown, setRemoteCountdown] = useState(null);
   const [user, loading] = useAuthState(auth);
@@ -38,15 +29,12 @@ const LiveSession = () => {
   const joinLink = `${window.location.origin}/join/${sessionId}`;
 
   useEffect(() => {
-    // Listener para participantes
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
     const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.values(data) : [];
-      setParticipants(list);
+      setParticipants(data ? Object.values(data) : []);
     });
 
-    // Listener para el estado general de la sesión y el joinCode
     const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
     const unsubscribeSession = onValue(sessionRef, (snapshot) => {
       const data = snapshot.val();
@@ -54,12 +42,11 @@ const LiveSession = () => {
         setSessionStatus(data.status || 'waiting');
         if (typeof data.joinCode !== 'undefined' && data.joinCode !== null) {
           setSessionJoinCode(data.joinCode);
-          setJoinCodeTimeout(false); // Limpiar error si llega el código
+          setJoinCodeTimeout(false);
         }
       }
     });
 
-    // Escuchar la cuenta regresiva desde RTDB (para admin y espectadores)
     const countdownRef = ref(rtdb, `liveSessions/${sessionId}/countdown`);
     const unsubscribeCountdown = onValue(countdownRef, (snapshot) => {
       setRemoteCountdown(snapshot.val());
@@ -72,7 +59,6 @@ const LiveSession = () => {
     };
   }, [sessionId]);
 
-  // Timeout para mostrar error si no hay código tras 3 segundos
   useEffect(() => {
     if (!sessionJoinCode) {
       const timeout = setTimeout(() => {
@@ -84,19 +70,16 @@ const LiveSession = () => {
     }
   }, [sessionJoinCode]);
 
-  // Mostrar el joinCode local solo si no hay en RTDB
   useEffect(() => {
     if (!sessionJoinCode && localJoinCode) {
       setSessionJoinCode(localJoinCode);
     }
   }, [sessionJoinCode, localJoinCode]);
 
-  // Modificar startSession para iniciar cuenta regresiva antes de cambiar estado
   const startSession = async () => {
     if (sessionStatus === 'waiting') {
       setShowCountdown(true);
       setCountdown(3);
-      // Guardar cuenta regresiva en RTDB
       const countdownRef = ref(rtdb, `liveSessions/${sessionId}/countdown`);
       let counter = 3;
       set(countdownRef, counter);
@@ -107,98 +90,102 @@ const LiveSession = () => {
         if (counter === 0) {
           clearInterval(interval);
           setShowCountdown(false);
-          set(countdownRef, null); // Limpiar countdown en RTDB
-          // Cambiar el estado de la sesión en RTDB
+          set(countdownRef, null);
           const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
-          update(sessionRef, {
-            status: 'started',
-            quizId: quizId,
-          });
+          update(sessionRef, { status: 'started', quizId: quizId });
         }
       }, 1000);
     }
   };
 
   const handleCancelSession = async () => {
-    // Cambiar estado a cancelado en RTDB sin borrar joinCode
     const sessionRef = ref(rtdb, `liveSessions/${sessionId}`);
-    await update(sessionRef, {
-      status: 'cancelled',
-      quizId: quizId,
-    });
+    await update(sessionRef, { status: 'cancelled', quizId: quizId });
     navigate(-1);
   };
 
-  // Handler para eliminar participante
   const handleDeleteParticipant = async (participant) => {
     if (!participant || !sessionId) return;
-    // Buscar el key del participante en RTDB
+    // Si el participante tiene ID único, se elimina directamente su entrada
+    if (participant.id) {
+      await set(ref(rtdb, `liveSessions/${sessionId}/participants/${participant.id}`), null);
+      setShowDeleteModal(false);
+      setParticipantToDelete(null);
+      return;
+    }
+    // Respaldo para entradas antiguas sin ID
     const participantsRef = ref(rtdb, `liveSessions/${sessionId}/participants`);
     onValue(participantsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const entry = Object.entries(data).find(([key, value]) => value.name === participant.name && (!participant.personnelCode || value.personnelCode === participant.personnelCode));
+        const entry = Object.entries(data).find(
+          ([key, value]) =>
+            value.name === participant.name &&
+            (!participant.personnelCode || value.personnelCode === participant.personnelCode)
+        );
         if (entry) {
           const [key] = entry;
-          // Eliminar el participante
           set(ref(rtdb, `liveSessions/${sessionId}/participants/${key}`), null);
         }
       }
     }, { onlyOnce: true });
     setShowDeleteModal(false);
     setParticipantToDelete(null);
-  }
+  };
 
-  // Redirección automática del admin a la página de estadísticas en tiempo real
   useEffect(() => {
-    // Solo redirigir si la sesión ha comenzado, el countdown terminó y el usuario está autenticado
     if (!loading && user && sessionStatus === 'started' && (!remoteCountdown || remoteCountdown <= 0)) {
       navigate(`/admin/session/${quizId}/${sessionId}/stats`, { replace: true });
     }
   }, [sessionStatus, remoteCountdown, quizId, sessionId, navigate, user, loading]);
 
-  // Mostrar pantalla de carga si el estado de autenticación está cargando
+  // Si la sesión se finalizó o canceló, cerrar la sala del host
+  useEffect(() => {
+    if (sessionStatus === 'finished' || sessionStatus === 'cancelled') {
+      navigate('/myquizzes', { replace: true });
+    }
+  }, [sessionStatus, navigate]);
+
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-purple-800 to-black text-white">
-        <span className="text-3xl font-bold animate-pulse">Cargando...</span>
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-900 to-black text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-400" />
+          <span className="text-lg font-medium text-indigo-200">Cargando sesión...</span>
+        </div>
       </div>
     );
   }
 
-  // Si no hay usuario autenticado, no renderizar nada (o redirigir al login si lo prefieres)
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-purple-800 to-black text-white font-sans relative overflow-hidden">
-      {/* Botón Regresar en la esquina superior izquierda */}
+    <div className="min-h-screen w-full bg-gradient-to-br from-indigo-900 to-black text-white font-sans relative overflow-hidden">
+      {/* Botón regresar */}
       <button
         onClick={handleCancelSession}
-        className="absolute top-4 left-4 px-4 py-2 border border-white text-white rounded-md bg-white bg-opacity-10 hover:bg-opacity-20 transition z-10"
+        className="absolute top-4 left-4 px-4 py-2 border border-white/30 text-white rounded-lg bg-white/10 hover:bg-white/20 transition z-10 text-sm font-medium"
       >
         Regresar
       </button>
 
       <div className="max-w-2xl mx-auto pt-12 px-6">
-        {/* Encabezado de la sesión (instrucciones, código, QR) */}
-        <div className="border border-purple-600 rounded-lg p-6 flex flex-col sm:flex-row justify-between items-center bg-black bg-opacity-30 backdrop-blur-md shadow-xl">
-          {/* Instrucciones + Código */}
+        {/* Código e instrucciones */}
+        <div className="border border-indigo-600/50 rounded-xl p-6 flex flex-col sm:flex-row justify-between items-center bg-black/30 backdrop-blur-md shadow-xl">
           <div className="space-y-3 text-center sm:text-left">
-            <p className="uppercase text-xs text-gray-400">1. ÚNETE USANDO CUALQUIER DISPOSITIVO</p>
-            <p className="font-semibold text-white text-md">{`${window.location.origin}/join`}</p>
-            <p className="uppercase text-xs text-gray-400">2. INTRODUCE EL CÓDIGO DE UNIÓN</p>
-            <p className="text-4xl font-bold tracking-widest">
+            <p className="uppercase text-xs text-gray-400 tracking-wider">1. Únete usando cualquier dispositivo</p>
+            <p className="font-semibold text-white">{`${window.location.origin}/join`}</p>
+            <p className="uppercase text-xs text-gray-400 tracking-wider">2. Introduce el código de unión</p>
+            <p className="text-4xl font-bold tracking-widest text-indigo-200">
               {sessionJoinCode
                 ? <span translate="no">{sessionJoinCode}</span>
                 : joinCodeTimeout
-                  ? 'Error: No se pudo obtener el código. Intenta recargar.'
-                  : 'Cargando...'}
+                  ? <span className="text-red-400 text-lg">Error: No se pudo obtener el código. Recarga la página.</span>
+                  : 'Cargando...'
+              }
             </p>
           </div>
 
-          {/* QR */}
           <div className="flex flex-col items-center mt-6 sm:mt-0 gap-3">
             <div onClick={() => setShowQR(true)} className="cursor-pointer">
               <QRCodeCanvas
@@ -206,45 +193,42 @@ const LiveSession = () => {
                 size={100}
                 bgColor="#FFFFFF"
                 fgColor="#000000"
-                className="cursor-pointer hover:scale-105 transition"
-                onClick={() => setShowQR(true)}
+                className="cursor-pointer hover:scale-105 transition rounded"
               />
-              <p className="text-xs text-center mt-1">Share via QR</p>
+              <p className="text-xs text-center mt-1 text-gray-400">Escanear QR</p>
             </div>
           </div>
         </div>
 
         {sessionStatus === 'waiting' && (
           <div className="flex flex-col items-center mt-6">
-            {/* Botón EMPEZAR */}
             <button
               onClick={startSession}
               disabled={participants.length === 0}
-              className={`bg-purple-600 hover:bg-purple-700 text-white w-full max-w-md py-3 rounded-full text-lg font-semibold shadow transition-all
-                ${participants.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`
-              }
+              className={`bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg transition-shadow text-white w-full max-w-md py-3.5 rounded-full text-lg font-bold ${
+                participants.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               EMPEZAR
             </button>
 
-            {/* Lista de participantes */}
             <div className="mt-8 w-full text-center">
-              <p className="text-3xl text-gray-400 mb-2">
-                👥 Esperando a los participantes...
-              </p>
+              <p className="text-2xl text-gray-400 mb-4">Esperando participantes...</p>
               {participants.length === 0 ? (
-                <div className="text-gray-300">Aún no hay participantes en la sala.</div>
+                <div className="text-gray-500 text-sm">Aún no hay participantes en la sala.</div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                   {participants.map((p, i) => (
                     <div
                       key={i}
-                      className="bg-purple-700/70 rounded-3xl p-4 flex flex-col items-center gap-3 shadow-lg cursor-pointer hover:bg-purple-600 transition"
+                      className="bg-indigo-700/70 rounded-2xl p-4 flex flex-col items-center gap-2 shadow-lg cursor-pointer hover:bg-indigo-600/80 transition"
                       onClick={() => { setShowDeleteModal(true); setParticipantToDelete(p); }}
-                      title="Eliminar participante"
+                      title="Clic para eliminar participante"
                     >
-                      <div className="text-white font-semibold text-xl">{p.name || `Participante ${i + 1}`}</div>
-                      {p.personnelCode && <div className="text-xs text-gray-300">Cód: {p.personnelCode}</div>}
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/50 flex items-center justify-center font-bold text-lg">
+                        {(p.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="text-white font-semibold">{p.name || `Participante ${i + 1}`}</div>
                     </div>
                   ))}
                 </div>
@@ -253,11 +237,10 @@ const LiveSession = () => {
           </div>
         )}
 
-        {/* Visualización de la pregunta actual para el admin */}
         {sessionStatus === 'started' && (!remoteCountdown || remoteCountdown <= 0) && quizQuestions.length > 0 && (
-          <div className="mt-8 text-center animate-fadeIn">
+          <div className="mt-8 text-center">
             <h3 className="text-2xl font-bold mb-4 animate-bounce">Pregunta en vivo</h3>
-            <div className="bg-purple-800 rounded-xl p-6 text-xl text-white text-center mb-6 min-h-[80px] flex items-center justify-center animate-fadeInDown">
+            <div className="bg-indigo-800/80 rounded-xl p-6 text-xl text-white text-center mb-6 min-h-[80px] flex items-center justify-center">
               {quizQuestions[0].text || quizQuestions[0].pregunta || 'Pregunta'}
             </div>
             <ResponseCounter sessionId={sessionId} currentQuestionIndex={0} question={quizQuestions[0]} />
@@ -268,15 +251,13 @@ const LiveSession = () => {
       {/* Modal QR grande */}
       {showQR && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-          onClick={e => {
-            if (e.target === e.currentTarget) setShowQR(false);
-          }}
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowQR(false); }}
         >
-          <div className="relative bg-white p-4 rounded-lg shadow-lg">
+          <div className="relative bg-white p-6 rounded-xl shadow-2xl">
             <button
               onClick={() => setShowQR(false)}
-              className="absolute top-2 right-2 text-gray-700 hover:text-black text-lg"
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-lg"
             >
               ✖
             </button>
@@ -290,21 +271,23 @@ const LiveSession = () => {
         </div>
       )}
 
-      {/* Modal de confirmación para eliminar participante */}
+      {/* Modal eliminar participante */}
       {showDeleteModal && participantToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center">
-            <h2 className="text-xl font-bold text-red-600 mb-4">¿Eliminar participante?</h2>
-            <p className="mb-6 text-gray-800">¿Seguro que deseas eliminar a <span className="font-semibold">{participantToDelete.name}</span> de la sesión?</p>
-            <div className="flex gap-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-xl flex flex-col items-center max-w-sm w-full mx-4">
+            <h2 className="text-xl font-bold text-red-600 mb-3">¿Eliminar participante?</h2>
+            <p className="mb-6 text-gray-700 text-center">
+              ¿Seguro que deseas eliminar a <span className="font-semibold">{participantToDelete.name}</span> de la sesión?
+            </p>
+            <div className="flex gap-3 w-full">
               <button
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold"
+                className="flex-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
                 onClick={() => handleDeleteParticipant(participantToDelete)}
               >
                 Eliminar
               </button>
               <button
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg font-bold"
+                className="flex-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold transition-colors"
                 onClick={() => { setShowDeleteModal(false); setParticipantToDelete(null); }}
               >
                 Cancelar
@@ -314,12 +297,12 @@ const LiveSession = () => {
         </div>
       )}
 
-      {/* Mostrar animación de cuenta regresiva sobre el contenido */}
+      {/* Cuenta regresiva */}
       {((showCountdown || (remoteCountdown && remoteCountdown > 0)) && sessionStatus !== 'started') && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50 animate-fadeIn">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-50">
           <div className="flex flex-col items-center">
-            <span className="text-6xl font-extrabold text-white animate-pulse mb-4">¡A la cuenta de!</span>
-            <span className="text-[8rem] font-extrabold text-purple-400 animate-bounce">
+            <span className="text-5xl font-extrabold text-white mb-4">¡A la cuenta de!</span>
+            <span className="text-[8rem] font-extrabold text-indigo-400 animate-bounce">
               {showCountdown ? countdown : remoteCountdown}
             </span>
           </div>

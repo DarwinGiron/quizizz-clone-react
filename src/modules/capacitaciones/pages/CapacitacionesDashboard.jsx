@@ -5,6 +5,20 @@ import { useNavigate, Link } from 'react-router-dom';
 import { format, isAfter, isBefore, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { onAuthStateChanged } from 'firebase/auth';
+import {
+  Plus,
+  Search,
+  GraduationCap,
+  Calendar,
+  Clock,
+  User,
+  BookOpen,
+  PlayCircle,
+  CalendarClock,
+  CheckCircle2,
+  Users,
+  Gauge,
+} from 'lucide-react';
 import { GestionarHorariosModal } from '../components';
 
 const CapacitacionesDashboard = () => {
@@ -160,11 +174,6 @@ const CapacitacionesDashboard = () => {
     }
   };
 
-  // Función para obtener icono según categoría
-  const getIconoCategoria = (categoria) => {
-    return categoria || 'Capacitación';
-  };
-
   if (loading) {
     return (
       <div className="flex">
@@ -189,7 +198,8 @@ const CapacitacionesDashboard = () => {
               <p className="text-gray-600">Gestiona y supervisa todas las capacitaciones del sistema</p>
             </div>
             <Link to="/capacitaciones/nueva">
-              <button className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-sm font-medium">
+              <button className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all shadow-sm font-medium">
+                <Plus className="w-5 h-5" />
                 Nueva Capacitación
               </button>
             </Link>
@@ -203,7 +213,9 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-gray-600">Total</p>
                   <p className="text-2xl font-bold text-gray-900">{estadisticasGenerales.total}</p>
                 </div>
-
+                <div className="bg-gray-100 p-2 rounded-lg">
+                  <BookOpen className="w-5 h-5 text-gray-600" />
+                </div>
               </div>
             </div>
             
@@ -213,7 +225,9 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-green-600">En Curso</p>
                   <p className="text-2xl font-bold text-green-700">{estadisticasGenerales.activas}</p>
                 </div>
-
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <PlayCircle className="w-5 h-5 text-green-600" />
+                </div>
               </div>
             </div>
             
@@ -223,7 +237,9 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-blue-600">Próximas</p>
                   <p className="text-2xl font-bold text-blue-700">{estadisticasGenerales.proximas}</p>
                 </div>
-
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <CalendarClock className="w-5 h-5 text-blue-600" />
+                </div>
               </div>
             </div>
             
@@ -233,7 +249,9 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-gray-600">Finalizadas</p>
                   <p className="text-2xl font-bold text-gray-700">{estadisticasGenerales.finalizadas}</p>
                 </div>
-
+                <div className="bg-gray-100 p-2 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5 text-gray-600" />
+                </div>
               </div>
             </div>
             
@@ -243,7 +261,9 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-purple-600">Participantes</p>
                   <p className="text-2xl font-bold text-purple-700">{estadisticasGenerales.totalParticipantes}</p>
                 </div>
-
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <Users className="w-5 h-5 text-purple-600" />
+                </div>
               </div>
             </div>
             
@@ -253,7 +273,9 @@ const CapacitacionesDashboard = () => {
                   <p className="text-sm text-orange-600">Ocupación</p>
                   <p className="text-2xl font-bold text-orange-700">{estadisticasGenerales.ocupacionPromedio}%</p>
                 </div>
-
+                <div className="bg-orange-100 p-2 rounded-lg">
+                  <Gauge className="w-5 h-5 text-orange-600" />
+                </div>
               </div>
             </div>
           </div>
@@ -264,13 +286,16 @@ const CapacitacionesDashboard = () => {
               {/* Búsqueda */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Búsqueda</label>
-                <input
-                  type="text"
-                  placeholder="Buscar capacitaciones..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar capacitaciones..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                  />
+                </div>
               </div>
 
               {/* Filtro por estado */}
@@ -317,7 +342,7 @@ const CapacitacionesDashboard = () => {
         {capacitacionesFiltradas.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-white rounded-lg shadow-sm p-8 max-w-md mx-auto">
-
+              <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 {busqueda || filtroEstado !== 'todas' || filtroCategoria !== 'todas' 
                   ? 'No se encontraron capacitaciones' 
@@ -355,7 +380,9 @@ const CapacitacionesDashboard = () => {
                   <div className="p-6 pb-4">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{getIconoCategoria(cap.categoria)}</span>
+                        <div className="bg-indigo-100 p-2 rounded-lg">
+                          <GraduationCap className="w-5 h-5 text-indigo-600" />
+                        </div>
                         <div>
                           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                             {cap.categoria || 'General'}
@@ -407,19 +434,22 @@ const CapacitacionesDashboard = () => {
 
                     <div className="space-y-2 text-sm">
                       {cap.fechaInicio && cap.fechaFin && (
-                        <div className="flex items-center text-gray-500">
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Calendar className="w-4 h-4 flex-shrink-0" />
                           <span>
                             {format(parseISO(cap.fechaInicio), 'dd MMM', { locale: es })} - {format(parseISO(cap.fechaFin), 'dd MMM yyyy', { locale: es })}
                           </span>
                         </div>
                       )}
-                      
-                      <div className="flex items-center text-gray-500">
+
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Clock className="w-4 h-4 flex-shrink-0" />
                         <span>Bloques de {cap.duracionBloque || 60} min</span>
                       </div>
-                      
+
                       {cap.instructor && (
-                        <div className="flex items-center text-gray-500">
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <User className="w-4 h-4 flex-shrink-0" />
                           <span>{cap.instructor}</span>
                         </div>
                       )}

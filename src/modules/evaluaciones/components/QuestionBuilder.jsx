@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiTrash } from 'react-icons/fi';
+import { Trash2 } from 'lucide-react';
 
 const bgColors = ['bg-blue-500', 'bg-cyan-500', 'bg-yellow-400', 'bg-rose-400'];
 
@@ -27,12 +27,12 @@ const QuestionBuilder = ({ question, onUpdate, index, onDelete }) => {
   };
 
   return (
-    <div className="bg-purple-900 rounded-xl p-6 text-white space-y-4 shadow-md">
+    <div className="bg-indigo-900 rounded-xl p-6 text-white space-y-4 shadow-md">
       <textarea
         value={question.text}
         onChange={handleTextChange}
         placeholder="Escriba la pregunta aquí"
-        className="w-full bg-purple-800 p-4 rounded text-lg resize-none placeholder-white focus:outline-none"
+        className="w-full bg-indigo-800 p-4 rounded text-lg resize-none placeholder-white focus:outline-none"
       />
 
       <div className="grid grid-cols-2 gap-4">
@@ -50,7 +50,7 @@ const QuestionBuilder = ({ question, onUpdate, index, onDelete }) => {
                 }`}
               />
               <button onClick={() => handleDeleteOption(i)} title="Eliminar">
-                <FiTrash size={16} />
+                <Trash2 size={16} />
               </button>
             </div>
             <input
@@ -67,7 +67,7 @@ const QuestionBuilder = ({ question, onUpdate, index, onDelete }) => {
       <div className="flex justify-between items-center mt-4">
         <button
           type="button"
-          className="bg-purple-600 px-4 py-2 rounded text-sm"
+          className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-sm transition-colors"
           onClick={() =>
             onUpdate(index, {
               ...question,
@@ -79,7 +79,7 @@ const QuestionBuilder = ({ question, onUpdate, index, onDelete }) => {
         </button>
         <button
           type="button"
-          className="text-red-300 text-sm"
+          className="text-red-300 hover:text-red-400 text-sm transition-colors"
           onClick={() => onDelete(index)}
         >
           Eliminar pregunta

@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../firebase/config';
 import { format, parse } from 'date-fns';
 import Calendar from 'react-calendar';
+import { ChevronDown, ChevronUp, Clock, UserPlus } from 'lucide-react';
 import { BackButton } from '../../../shared';
 import 'react-calendar/dist/Calendar.css';
 
@@ -158,7 +159,7 @@ export default function AsignacionAvanzada() {
         <h1 className="text-3xl font-bold mb-2 text-gray-800">Asignación avanzada de participantes</h1>
         {capacitacion && (
           <p className="text-sm text-gray-600 mb-4">
-            Capacitación: <span className="font-semibold text-purple-700">{capacitacion.titulo}</span>
+            Capacitación: <span className="font-semibold text-indigo-700">{capacitacion.titulo}</span>
           </p>
         )}
 
@@ -169,10 +170,14 @@ export default function AsignacionAvanzada() {
               <div key={sup.id} className="border rounded-md p-2 bg-white shadow-sm">
                 <div
                   onClick={() => toggleCuadrilla(sup.id)}
-                  className="cursor-pointer text-purple-700 font-bold flex justify-between items-center"
+                  className="cursor-pointer text-indigo-700 font-bold flex justify-between items-center"
                 >
                   Supervisor: {sup.nombre}
-                  <span>{expandedSupervisor === sup.id ? '▲' : '▼'}</span>
+                  {expandedSupervisor === sup.id ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
                 </div>
 
                 {expandedSupervisor === sup.id && (
@@ -184,8 +189,8 @@ export default function AsignacionAvanzada() {
                         <div
                           key={p.id}
                           onClick={() => setSeleccionado(p)}
-                          className={`bg-gray-50 border border-gray-300 text-gray-800 p-1 rounded cursor-pointer hover:bg-purple-50 ${
-                            seleccionado?.id === p.id ? 'border-purple-400 bg-purple-100' : ''
+                          className={`bg-gray-50 border border-gray-300 text-gray-800 p-1 rounded cursor-pointer hover:bg-indigo-50 ${
+                            seleccionado?.id === p.id ? 'border-indigo-400 bg-indigo-100' : ''
                           }`}
                         >
                           <p className="font-semibold text-xs truncate">{p.nombre}</p>
@@ -203,7 +208,7 @@ export default function AsignacionAvanzada() {
 
           {/* Días habilitados */}
           <div>
-            <h2 className="text-sm font-semibold mb-1 text-gray-700">📅 Días habilitados</h2>
+            <h2 className="text-sm font-semibold mb-1 text-gray-700">Días habilitados</h2>
             <Calendar
               onChange={(date) => setDiaSeleccionado(formatLocalDate(date))}
               value={createLocalDate(diaSeleccionado)}
@@ -217,7 +222,9 @@ export default function AsignacionAvanzada() {
 
           {/* Horarios habilitados */}
           <div>
-            <h2 className="text-sm font-semibold mb-1 text-gray-700">⏱️ Horarios</h2>
+            <h2 className="text-sm font-semibold mb-1 text-gray-700 flex items-center gap-1">
+              <Clock className="w-4 h-4" /> Horarios
+            </h2>
             <div className="space-y-1 text-xs">
               {bloquesFiltrados.map(b => {
                 const ocupados = b.participantes?.length || 0;
@@ -249,12 +256,9 @@ export default function AsignacionAvanzada() {
           <button
             onClick={asignarParticipante}
             disabled={!seleccionado || !horarioSeleccionado}
-            className={`px-6 py-2 rounded text-white font-bold transition text-sm ${
-              !seleccionado || !horarioSeleccionado
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-700'
-            }`}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-white font-bold transition text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            <UserPlus className="w-4 h-4" />
             Asignar participante
           </button>
         </div>

@@ -15,6 +15,21 @@ import { format, parseISO, isSameDay, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { onAuthStateChanged } from 'firebase/auth';
 import { BackButton } from '../../../shared';
+import {
+  Calendar,
+  Clock,
+  Users,
+  GraduationCap,
+  ClipboardList,
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+  Target,
+  ChevronDown,
+  Lock,
+  Pencil,
+  UserPlus,
+} from 'lucide-react';
 
 const CapacitacionDetail = () => {
   const { id } = useParams();
@@ -387,7 +402,7 @@ const CapacitacionDetail = () => {
       <div className="flex">
         <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
             <p className="text-gray-600">Cargando capacitación...</p>
           </div>
         </div>
@@ -400,10 +415,14 @@ const CapacitacionDetail = () => {
       <div className="flex">
         <div className="flex-1 p-6 bg-gray-50 min-h-screen">
           <div className="text-center py-16">
-            <div className="text-6xl mb-4">❌</div>
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 p-4 rounded-full">
+                <AlertCircle className="w-10 h-10 text-red-500" />
+              </div>
+            </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Capacitación no encontrada</h2>
             <p className="text-gray-600 mb-4">La capacitación que buscas no existe o ha sido eliminada.</p>
-            <Link to="/capacitaciones" className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
+            <Link to="/capacitaciones" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
               Volver a Capacitaciones
             </Link>
           </div>
@@ -419,17 +438,15 @@ const CapacitacionDetail = () => {
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="mb-8">
-          <BackButton to="/capacitaciones" label="← Volver a Capacitaciones" className="mb-6" />
+          <BackButton to="/capacitaciones" label="Volver a Capacitaciones" className="mb-6" />
           
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6">
             <div className="flex justify-between items-start mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="text-3xl">
-                    {capacitacion?.categoria === 'Seguridad' ? '🛡️' :
-                     capacitacion?.categoria === 'Técnica' ? '⚙️' :
-                     capacitacion?.categoria === 'Liderazgo' ? '👑' : '📚'}
-                  </span>
+                  <div className="bg-indigo-100 p-3 rounded-lg">
+                    <GraduationCap className="w-7 h-7 text-indigo-600" />
+                  </div>
                   <div>
                     <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full mb-2">
                       {capacitacion?.categoria || 'General'}
@@ -447,7 +464,9 @@ const CapacitacionDetail = () => {
                 {/* Información del instructor */}
                 {capacitacion?.instructor && (
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xl">👨‍🏫</span>
+                    <div className="bg-indigo-100 p-2 rounded-lg">
+                      <GraduationCap className="w-5 h-5 text-indigo-600" />
+                    </div>
                     <span className="text-gray-700 font-medium">Instructor: {capacitacion.instructor}</span>
                   </div>
                 )}
@@ -457,7 +476,7 @@ const CapacitacionDetail = () => {
                   {capacitacion?.fecha_inicio && capacitacion?.fecha_fin && (
                     <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-blue-600">📅</span>
+                        <Calendar className="w-4 h-4 text-blue-600" />
                         <span className="text-sm font-medium text-blue-800">Duración</span>
                       </div>
                       <p className="text-blue-900 font-semibold">
@@ -468,7 +487,7 @@ const CapacitacionDetail = () => {
                   
                   <div className="bg-green-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-green-600">⏱️</span>
+                      <Clock className="w-4 h-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800">Bloque</span>
                     </div>
                     <p className="text-green-900 font-semibold">{capacitacion?.duracionBloque || 60} minutos</p>
@@ -476,7 +495,7 @@ const CapacitacionDetail = () => {
                   
                   <div className="bg-orange-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-orange-600">👥</span>
+                      <Users className="w-4 h-4 text-orange-600" />
                       <span className="text-sm font-medium text-orange-800">Cupo por bloque</span>
                     </div>
                     <p className="text-orange-900 font-semibold">{estadisticas.cupoPorBloque} personas</p>
@@ -484,7 +503,7 @@ const CapacitacionDetail = () => {
                   
                   <div className="bg-purple-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-purple-600">🕐</span>
+                      <Clock className="w-4 h-4 text-purple-600" />
                       <span className="text-sm font-medium text-purple-800">Horario</span>
                     </div>
                     <p className="text-purple-900 font-semibold">
@@ -497,7 +516,7 @@ const CapacitacionDetail = () => {
                 {capacitacion?.objetivos && (
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span>🎯</span>
+                      <Target className="w-5 h-5 text-indigo-600" />
                       Objetivos de la capacitación
                     </h3>
                     <ul className="space-y-2">
@@ -522,7 +541,9 @@ const CapacitacionDetail = () => {
                   <p className="text-sm text-gray-600">Total Bloques</p>
                   <p className="text-2xl font-bold text-gray-900">{estadisticas.totalBloques}</p>
                 </div>
-                <div className="text-2xl">�</div>
+                <div className="bg-indigo-100 p-2 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-indigo-600" />
+                </div>
               </div>
             </div>
 
@@ -532,7 +553,9 @@ const CapacitacionDetail = () => {
                   <p className="text-sm text-green-600">Disponibles</p>
                   <p className="text-2xl font-bold text-green-700">{estadisticas.bloquesDisponibles}</p>
                 </div>
-                <div className="text-2xl">✅</div>
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                </div>
               </div>
             </div>
 
@@ -542,7 +565,9 @@ const CapacitacionDetail = () => {
                   <p className="text-sm text-blue-600">Participantes</p>
                   <p className="text-2xl font-bold text-blue-700">{estadisticas.totalParticipantes}</p>
                 </div>
-                <div className="text-2xl">👥</div>
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
               </div>
             </div>
 
@@ -552,7 +577,9 @@ const CapacitacionDetail = () => {
                   <p className="text-sm text-purple-600">Total Cupos</p>
                   <p className="text-2xl font-bold text-purple-700">{estadisticas.totalCupos}</p>
                 </div>
-                <div className="text-2xl">📋</div>
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-purple-600" />
+                </div>
               </div>
             </div>
 
@@ -562,7 +589,9 @@ const CapacitacionDetail = () => {
                   <p className="text-sm text-orange-600">Ocupación</p>
                   <p className="text-2xl font-bold text-orange-700">{estadisticas.ocupacion}%</p>
                 </div>
-                <div className="text-2xl">📈</div>
+                <div className="bg-orange-100 p-2 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-orange-600" />
+                </div>
               </div>
             </div>
           </div>
@@ -571,7 +600,9 @@ const CapacitacionDetail = () => {
         {/* Bloques por fecha */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <span>🗓️</span>
+            <div className="bg-indigo-100 p-2 rounded-lg">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+            </div>
             Cronograma de Bloques
           </h2>
 
@@ -603,7 +634,7 @@ const CapacitacionDetail = () => {
                             className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition-all"
                             title="Habilitar todos los bloques del día"
                           >
-                            ✅ Habilitar todos
+                            Habilitar todos
                           </button>
                           
                           <button
@@ -611,7 +642,7 @@ const CapacitacionDetail = () => {
                             className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition-all"
                             title="Deshabilitar todos los bloques del día"
                           >
-                            🚫 Deshabilitar todos
+                            Deshabilitar todos
                           </button>
                         </div>
                       )}
@@ -638,8 +669,8 @@ const CapacitacionDetail = () => {
                           {/* Overlay de carga */}
                           {actualizando === bloque.id && (
                             <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-                              <div className="flex items-center gap-2 text-purple-600">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                              <div className="flex items-center gap-2 text-indigo-600">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
                                 <span className="text-sm font-medium">Actualizando...</span>
                               </div>
                             </div>
@@ -652,9 +683,11 @@ const CapacitacionDetail = () => {
                             <div className="flex justify-between items-center">
                               <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-lg">
-                                    {bloque.disponible === false ? '🚫' : '⏰'}
-                                  </span>
+                                  {bloque.disponible === false ? (
+                                    <Lock className="w-4 h-4 text-red-500" />
+                                  ) : (
+                                    <Clock className="w-4 h-4 text-indigo-600" />
+                                  )}
                                   <span className="font-semibold text-gray-900">
                                     {bloque.hora_inicio} - {bloque.hora_fin}
                                   </span>
@@ -704,7 +737,7 @@ const CapacitacionDetail = () => {
                                       } ${actualizando === bloque.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                                       title={bloque.disponible === false ? 'Hacer disponible' : 'Marcar como no disponible'}
                                     >
-                                      {actualizando === bloque.id ? '⏳' : bloque.disponible === false ? '✅' : '🚫'}
+                                      {actualizando === bloque.id ? '...' : bloque.disponible === false ? 'OK' : 'No'}
                                     </button>
                                     
                                     <button
@@ -718,16 +751,14 @@ const CapacitacionDetail = () => {
                                       }`}
                                       title="Eliminar bloque"
                                     >
-                                      {actualizando === bloque.id ? '⏳' : '🗑️'}
+                                      {actualizando === bloque.id ? '...' : 'Eliminar'}
                                     </button>
                                   </div>
                                 )}
                                 
-                                <span className={`transition-transform duration-200 ${
+                                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
                                   expandido === bloque.id ? 'rotate-180' : ''
-                                }`}>
-                                  ⌄
-                                </span>
+                                }`} />
                               </div>
                             </div>
                           </div>
@@ -737,7 +768,7 @@ const CapacitacionDetail = () => {
                             <div className="px-4 pb-4 border-t border-gray-200 bg-gray-50">
                               <div className="pt-4">
                                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                                  <span>👥</span>
+                                  <Users className="w-4 h-4 text-indigo-600" />
                                   Participantes registrados
                                 </h4>
                                 
@@ -759,7 +790,7 @@ const CapacitacionDetail = () => {
                                   </div>
                                 ) : (
                                   <div className="text-center py-6">
-                                    <div className="text-gray-400 text-4xl mb-2">👤</div>
+                                    <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                                     <p className="text-gray-500 text-sm">No hay participantes registrados en este bloque</p>
                                   </div>
                                 )}
@@ -774,14 +805,18 @@ const CapacitacionDetail = () => {
             ))
           ) : (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <div className="text-6xl mb-4">📅</div>
+              <div className="flex justify-center mb-4">
+                <div className="bg-indigo-100 p-4 rounded-full">
+                  <Calendar className="w-10 h-10 text-indigo-600" />
+                </div>
+              </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay bloques programados</h3>
               <p className="text-gray-600 mb-4">Esta capacitación aún no tiene bloques de horarios definidos.</p>
               <Link
                 to={`/asignaciones/intuitiva/${id}`}
-                className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition"
               >
-                <span>📋</span>
+                <UserPlus className="w-4 h-4" />
                 Crear Asignaciones
               </Link>
             </div>
@@ -792,18 +827,18 @@ const CapacitacionDetail = () => {
         <div className="fixed bottom-6 right-6 flex flex-col gap-3">
           <Link
             to={`/asignaciones/intuitiva/${id}`}
-            className="bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-all hover:scale-105"
+            className="bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105"
             title="Gestionar Asignaciones"
           >
-            <span className="text-xl">📋</span>
+            <UserPlus className="w-5 h-5" />
           </Link>
-          
+
           <Link
             to={`/capacitaciones/${id}/edit`}
             className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
             title="Editar Capacitación"
           >
-            <span className="text-xl">✏️</span>
+            <Pencil className="w-5 h-5" />
           </Link>
         </div>
       </div>

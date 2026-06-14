@@ -102,7 +102,7 @@ const QuizDetails = () => {
             className="bg-gray-100 text-purple-600 px-4 py-2 rounded border border-purple-600 hover:bg-purple-50"
             onClick={() => setShowExportModal(true)}
           >
-            📊 Exportar estadísticas
+            Exportar estadísticas
           </button>
         </div>
       </div>

@@ -19,20 +19,13 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
   const fetchCapacitaciones = async () => {
     try {
       setLoading(true);
-      console.log('Iniciando carga de capacitaciones...');
-      
-      // Cargar capacitaciones - mismo llamado que en Dashboard y CapacitacionesDashboard
       const capacitacionesSnapshot = await getDocs(collection(db, 'capacitaciones'));
       let capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
 
-      console.log('Capacitaciones cargadas:', capacitacionesData);
-
-      // Si no hay datos reales, usar datos de ejemplo
       if (capacitacionesData.length === 0) {
-        console.log('No hay datos reales, usando datos de ejemplo');
         capacitacionesData = [
           {
             id: 'ejemplo1',
@@ -66,24 +59,14 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
 
       // Filtrar capacitaciones que no hayan pasado (solo futuras o en curso)
       const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
-      
-      console.log('Fecha de hoy:', hoy);
-      console.log('Capacitaciones antes del filtro:', capacitacionesData);
-      
-      const capacitacionesActivas = capacitacionesData.filter(cap => {
-        if (!cap.fecha_fin) {
-          console.log(`Capacitación ${cap.titulo} - Sin fecha_fin, se mantiene`);
-          return true; // Si no tiene fecha_fin, mantenerla
-        }
-        const fechaFin = new Date(cap.fecha_fin);
-        fechaFin.setHours(23, 59, 59, 999); // Incluir todo el día final
-        const esActiva = fechaFin >= hoy;
-        console.log(`Capacitación ${cap.titulo} - fecha_fin: ${cap.fecha_fin}, fechaFin: ${fechaFin}, esActiva: ${esActiva}`);
-        return esActiva; // Solo capacitaciones que no hayan terminado
-      });
+      hoy.setHours(0, 0, 0, 0);
 
-      console.log('Capacitaciones después del filtro:', capacitacionesActivas);
+      const capacitacionesActivas = capacitacionesData.filter(cap => {
+        if (!cap.fecha_fin) return true;
+        const fechaFin = new Date(cap.fecha_fin);
+        fechaFin.setHours(23, 59, 59, 999);
+        return fechaFin >= hoy;
+      });
 
       // Ordenar por fecha de inicio (más recientes primero)
       capacitacionesActivas.sort((a, b) => {
@@ -92,7 +75,6 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
         return new Date(b.fecha_inicio) - new Date(a.fecha_inicio);
       });
 
-      console.log('Capacitaciones finales:', capacitacionesActivas);
       setCapacitaciones(capacitacionesActivas);
     } catch (error) {
       console.error('Error al cargar capacitaciones:', error);
@@ -134,7 +116,6 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span>📝</span>
               Tipo de Evaluación
             </h2>
             <button
@@ -172,7 +153,6 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
                 />
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <span>🎓</span>
                     Vincular a Capacitación Existente
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
@@ -238,7 +218,6 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
                 />
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <span>📋</span>
                     Evento Aislado
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
@@ -259,7 +238,7 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
           {tipoSeleccionado === 'capacitacion' && (
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-start gap-2">
-                <span className="text-yellow-600">💡</span>
+                <span className="text-yellow-600"></span>
                 <div>
                   <h4 className="font-medium text-yellow-800">Ventajas de vincular a capacitación:</h4>
                   <p className="text-sm text-yellow-700 mt-1">
