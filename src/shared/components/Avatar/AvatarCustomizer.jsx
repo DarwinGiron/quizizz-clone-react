@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Avatar3D from './Avatar3D';
+import { useAvatar } from './useAvatarStore';
 import {
   AVATAR_STYLES,
   AVATAR_COLORS,
@@ -10,11 +11,14 @@ import {
 
 /**
  * Componente para personalizar avatar
- * Permite seleccionar estilo, colores y accesorios
+ * Permite seleccionar estilo, colores, accesorios y animaciones
  */
-const AvatarCustomizer = ({ onAvatarChange, initialConfig = DEFAULT_AVATAR_CONFIG }) => {
+const AvatarCustomizer = ({ onAvatarChange, initialConfig = DEFAULT_AVATAR_CONFIG, userId = null }) => {
   const [config, setConfig] = useState(initialConfig);
   const [activeTab, setActiveTab] = useState('style');
+  const [previewAnimation, setPreviewAnimation] = useState('idle');
+  const [previewExpression, setPreviewExpression] = useState('happy');
+  const { saveUserAvatarToFirebase, isLoading } = useAvatar();
 
   const handleStyleChange = (styleId) => {
     const style = AVATAR_STYLES[styleId.toUpperCase()];
@@ -48,6 +52,19 @@ const AvatarCustomizer = ({ onAvatarChange, initialConfig = DEFAULT_AVATAR_CONFI
     onAvatarChange?.(newConfig);
   };
 
+  // Guardar avatar en Firebase
+  const handleSaveToFirebase = async () => {
+    if (!userId) {
+      console.warn('userId no proporcionado, no se puede guardar en Firebase');
+      return;
+    }
+    
+    const success = await saveUserAvatarToFirebase(userId, config);
+    if (success) {
+      console.log('Avatar guardado en Firebase exitosamente');
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -74,10 +91,66 @@ const AvatarCustomizer = ({ onAvatarChange, initialConfig = DEFAULT_AVATAR_CONFI
     >
       {/* Vista previa del avatar */}
       <motion.div
-        className="flex justify-center items-center bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow"
+        className="flex flex-col gap-4 bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow"
         variants={itemVariants}
       >
-        <Avatar3D config={config} animation="idle" size="md" interactive={true} />
+        {/* Avatar principal */}
+        <div className="flex justify-center items-center">
+          <Avatar3D 
+            config={config} 
+            animation={previewAnimation} 
+            expression={previewExpression}
+            size="md" 
+            interactive={true} 
+          />
+        </div>
+        
+        {/* Controles de animaciones */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {['idle', 'wave', 'dance', 'celebrate', 'thinking', 'impressed', 'shocked'].map((anim) => (
+            <motion.button
+              key={anim}
+              onClick={() => setPreviewAnimation(anim)}
+              className={`px-3 py-1 rounded-full text-sm transition-all ${
+                previewAnimation === anim
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {anim === 'idle' && '😐'}
+              {anim === 'wave' && '👋'}
+              {anim === 'dance' && '🕺'}
+              {anim === 'celebrate' && '🎉'}
+              {anim === 'thinking' && '🤔'}
+              {anim === 'impressed' && '😲'}
+              {anim === 'shocked' && '😱'}
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Controles de expresiones */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {['happy', 'thinking', 'impressed', 'shocked'].map((expr) => (
+            <motion.button
+              key={expr}
+              onClick={() => setPreviewExpression(expr)}
+              className={`px-3 py-1 rounded-full text-sm transition-all ${
+                previewExpression === expr
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {expr === 'happy' && '😊'}
+              {expr === 'thinking' && '🤔'}
+              {expr === 'impressed' && '😲'}
+              {expr === 'shocked' && '😮'}
+            </motion.button>
+          ))}
+        </div>
       </motion.div>
 
       {/* Tabs de personalización */}
@@ -224,6 +297,20 @@ const AvatarCustomizer = ({ onAvatarChange, initialConfig = DEFAULT_AVATAR_CONFI
       >
         <p>Tu avatar está personalizado y listo para usar</p>
       </motion.div>
+
+      {/* Botón de guardar en Firebase */}
+      {userId && (
+        <motion.button
+          onClick={handleSaveToFirebase}
+          disabled={isLoading}
+          className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          variants={itemVariants}
+        >
+          {isLoading ? 'Guardando...' : '💾 Guardar Avatar en Firebase'}
+        </motion.button>
+      )}
     </motion.div>
   );
 };
