@@ -4,9 +4,11 @@ import { db } from "../../../firebase/config";
 import { useNavigate } from "react-router-dom";
 import { startOfWeek, format } from "date-fns";
 import { TURNO_IDS, labelTurno } from "../../asignaciones/utils/turnos";
+import { useToast } from "../../../shared";
 
 export default function NuevoSupervisorModal({ onClose }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState({
     nombre: "",
     usuario: "",
@@ -19,14 +21,14 @@ export default function NuevoSupervisorModal({ onClose }) {
   const handleSubmit = async () => {
     const { nombre, usuario, contraseña, codigo } = form;
     if (!nombre || !usuario || !contraseña || !codigo) {
-      alert("Completa todos los campos");
+      toast.error("Completa todos los campos");
       return;
     }
 
     const q = query(collection(db, "usuarios"), where("usuario", "==", usuario));
     const snap = await getDocs(q);
     if (!snap.empty) {
-      alert("Este usuario ya existe.");
+      toast.error("Este usuario ya existe.");
       return;
     }
 

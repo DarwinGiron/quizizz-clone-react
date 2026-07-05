@@ -1,16 +1,16 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  FiHome,
-  FiLogOut,
-  FiUsers,
-  FiBookOpen,
-  FiCalendar,
-  FiTarget,
-  FiLayers,
-  FiChevronLeft,
-  FiChevronRight
-} from 'react-icons/fi';
+  Home,
+  LogOut,
+  Users,
+  BookOpen,
+  Target,
+  Layers,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+} from 'lucide-react';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,7 +31,7 @@ const Sidebar = () => {
   const supervisorNav = [
     {
       path: '/mis-asignaciones',
-      icon: FiTarget,
+      icon: Target,
       label: 'Mis Asignaciones',
       description: 'Asignar mi cuadrilla'
     }
@@ -41,31 +41,31 @@ const Sidebar = () => {
   const adminNav = [
     {
       path: '/dashboard',
-      icon: FiHome,
+      icon: Home,
       label: 'Dashboard',
       description: 'Panel principal'
     },
     {
       path: '/usuarios',
-      icon: FiUsers,
+      icon: Users,
       label: 'Usuarios',
       description: 'Gestión de usuarios'
     },
     {
       path: '/capacitaciones',
-      icon: FiBookOpen,
+      icon: BookOpen,
       label: 'Capacitaciones',
       description: 'Cursos y formación'
     },
     {
       path: '/asignaciones',
-      icon: FiTarget,
+      icon: Target,
       label: 'Asignaciones',
       description: 'Tareas asignadas'
     },
     {
       path: '/myquizzes',
-      icon: FiLayers,
+      icon: Layers,
       label: 'Mis Quizzes',
       description: 'Evaluaciones creadas'
     }
@@ -90,11 +90,9 @@ const Sidebar = () => {
         <div className="flex flex-col items-center p-6 pt-8 opacity-100">
           {/* Logo con efecto */}
           <div className="relative mb-4 w-16 h-16 transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl shadow-lg"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg"></div>
             <div className="relative w-full h-full bg-white rounded-2xl flex items-center justify-center shadow-inner">
-              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                ?
-              </span>
+              <GraduationCap className="w-8 h-8 text-indigo-600" />
             </div>
           </div>
           
@@ -119,7 +117,7 @@ const Sidebar = () => {
                   to={item.path}
                   className={`group relative flex items-center px-4 py-3 transition-all duration-200 rounded-xl ${
                     active
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
                       : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
                   }`}
                 >
@@ -131,7 +129,7 @@ const Sidebar = () => {
                   <div className="ml-3 flex-1">
                     <div className="font-medium text-sm">{item.label}</div>
                     <div className={`text-xs transition-colors ${
-                      active ? 'text-purple-100' : 'text-gray-400 group-hover:text-gray-300'
+                      active ? 'text-indigo-100' : 'text-gray-400 group-hover:text-gray-300'
                     }`}>
                       {item.description}
                     </div>
@@ -153,7 +151,7 @@ const Sidebar = () => {
             onClick={handleLogout}
             className="group w-full flex items-center transition-all duration-200 rounded-xl px-4 py-3 text-gray-300 hover:bg-red-500/20 hover:text-red-300"
           >
-            <FiLogOut size={20} className="transition-colors flex-shrink-0" />
+            <LogOut size={20} className="transition-colors flex-shrink-0" />
             <div className="ml-3 flex-1 text-left">
               <div className="font-medium text-sm">Cerrar sesión</div>
               <div className="text-xs text-gray-400 group-hover:text-red-200">Salir del sistema</div>
@@ -165,10 +163,10 @@ const Sidebar = () => {
       {/* Botón toggle para colapsar/expandir sidebar */}
       <button
         onClick={toggleSidebar}
-        className="fixed left-4 top-4 z-40 bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition-all shadow-lg"
+        className="fixed left-4 top-4 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg text-white p-2 rounded-lg transition-shadow"
         title={sidebarOpen ? 'Contraer sidebar' : 'Expandir sidebar'}
       >
-        {sidebarOpen ? <FiChevronLeft size={20} /> : <FiChevronRight size={20} />}
+        {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
       </button>
     </>
   );

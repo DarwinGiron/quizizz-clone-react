@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../../firebase/config';
-import { BackButton } from '../../../shared';
+import { BackButton, useToast } from '../../../shared';
 
 const SeleccionTipoEvaluacion = () => {
   const [modo, setModo] = useState(null);
@@ -10,6 +10,7 @@ const SeleccionTipoEvaluacion = () => {
   const [seleccionada, setSeleccionada] = useState('');
   const [tituloLibre, setTituloLibre] = useState('');
   const navigate = useNavigate();
+  const toast = useToast();
 
   useEffect(() => {
     const fetchCapacitaciones = async () => {
@@ -27,7 +28,7 @@ const SeleccionTipoEvaluacion = () => {
     } else if (modo === 'independiente' && tituloLibre.trim()) {
       navigate('/create', { state: { titulo: tituloLibre.trim() } });
     } else {
-      alert('Debes completar la información para continuar.');
+      toast.info('Debes completar la información para continuar.');
     }
   };
 

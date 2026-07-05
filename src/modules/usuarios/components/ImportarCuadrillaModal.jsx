@@ -5,22 +5,27 @@ import * as XLSX from "xlsx";
 import { db } from "../../../firebase/config";
 import { collection, addDoc } from "firebase/firestore";
 import { UploadCloud } from "lucide-react";
+import { useToast } from "../../../shared";
 
 export default function ImportarCuadrillaModal({ supervisorId, onClose, onImportado }) {
   const [archivo, setArchivo] = useState(null);
   const [arrastrando, setArrastrando] = useState(false);
+  const toast = useToast();
 
   const handleFile = (file) => {
     if (!file) return;
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
-      alert("Solo se permiten archivos .xlsx o .xls");
+      toast.error("Solo se permiten archivos .xlsx o .xls");
       return;
     }
     setArchivo(file);
   };
 
   const importar = async () => {
-    if (!archivo) return alert("Selecciona un archivo Excel válido.");
+    if (!archivo) {
+      toast.error("Selecciona un archivo Excel válido.");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -59,9 +64,9 @@ export default function ImportarCuadrillaModal({ supervisorId, onClose, onImport
       }
 
       if (errores.length > 0) {
-        alert(`${importados} importados.\n\nErrores:\n${errores.join("\n")}`);
+        toast.error(`${importados} importados, ${errores.length} con errores.`);
       } else {
-        alert(`${importados} miembros importados correctamente.`);
+        toast.success(`${importados} miembros importados correctamente.`);
       }
 
       onImportado();

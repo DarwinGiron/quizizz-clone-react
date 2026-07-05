@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../firebase/config";
 import { ParticipanteItem } from '../../usuarios';
+import { useToast } from "../../../shared";
 
 export default function AsignarParticipantesModal({ horario, capacitacionId, onClose }) {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [filtro, setFiltro] = useState("");
+  const toast = useToast();
 
   const [nombre, setNombre] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -34,7 +36,10 @@ export default function AsignarParticipantesModal({ horario, capacitacionId, onC
 
   const asignarExistente = async (usuario) => {
     const yaExiste = participantes.find(p => p.codigo === usuario.codigo);
-    if (yaExiste) return alert("Este usuario ya está asignado.");
+    if (yaExiste) {
+      toast.info("Este usuario ya está asignado.");
+      return;
+    }
     const ref = collection(db, `capacitaciones/${capacitacionId}/horarios/${horario.id}/participantes`);
     await addDoc(ref, usuario);
     onClose();

@@ -7,10 +7,12 @@ import useSessionStats from '../hooks/useSessionStats';
 import RankingTab from '../components/RankingTab';
 import QuestionsTab from '../components/QuestionsTab';
 import ResponsesTab from '../components/ResponsesTab';
+import { useToast } from '../../../shared';
 
 const SessionStatsAdmin = () => {
   const { quizId, sessionId } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const { ranking, questionAnalysis, quizQuestions, quizTitle, sessionData, kpis, participants } = useSessionStats(sessionId, quizId);
 
   // Estado para pestañas y modal
@@ -28,7 +30,7 @@ const SessionStatsAdmin = () => {
   const handleEndSession = async () => {
     let finalQuizId = quizId || sessionId?.split('-')[0];
     if (!finalQuizId || !sessionId) {
-      alert('Error: Faltan datos necesarios.');
+      toast.error('Error: Faltan datos necesarios.');
       return;
     }
 
@@ -118,7 +120,7 @@ const SessionStatsAdmin = () => {
       navigate('/myquizzes');
     } catch (error) {
       console.error('Error finishing session:', error);
-      alert('Error al terminar la sesión.');
+      toast.error('Error al terminar la sesión.');
     }
   };
 

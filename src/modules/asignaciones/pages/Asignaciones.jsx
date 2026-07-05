@@ -12,6 +12,7 @@ import {
   MoreVertical,
   XCircle,
 } from 'lucide-react';
+import { useToast } from '../../../shared';
 
 export default function Asignaciones() {
   const [capacitaciones, setCapacitaciones] = useState([]);
@@ -20,6 +21,7 @@ export default function Asignaciones() {
   const [cerrando, setCerrando] = useState(null);
   const menuRef = useRef(null);
   const navigate = useNavigate();
+  const toast = useToast();
 
   // Normaliza los campos para soportar datos en snake_case (reales) y camelCase
   const normalizar = (cap) => ({
@@ -111,7 +113,7 @@ export default function Asignaciones() {
       setCapacitaciones((prev) => prev.filter((cap) => cap.id !== capId));
     } catch (error) {
       console.error('Error al cerrar la asignación:', error);
-      alert('No se pudo cerrar la asignación. Intenta de nuevo.');
+      toast.error('No se pudo cerrar la asignación. Intenta de nuevo.');
     } finally {
       setCerrando(null);
     }

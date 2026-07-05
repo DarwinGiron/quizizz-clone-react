@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { X, Zap, AlertTriangle, CheckCircle2, Users } from 'lucide-react';
+import { useToast } from '../../../shared';
 import {
   normalizarConfig,
   contarPorClave,
@@ -48,6 +49,7 @@ export default function ConvocatoriaModal({
   const [supervisores, setSupervisores] = useState([]);
   const [cuadrillas, setCuadrillas] = useState({});
   const [aplicando, setAplicando] = useState(false);
+  const toast = useToast();
 
   const config = useMemo(
     () => normalizarConfig(capacitacion?.asignacion_config),
@@ -198,7 +200,7 @@ export default function ConvocatoriaModal({
       onClose?.();
     } catch (e) {
       console.error('Error al aplicar convocatoria:', e);
-      alert('No se pudo aplicar la convocatoria. Intenta de nuevo.');
+      toast.error('No se pudo aplicar la convocatoria. Intenta de nuevo.');
     } finally {
       setAplicando(false);
     }

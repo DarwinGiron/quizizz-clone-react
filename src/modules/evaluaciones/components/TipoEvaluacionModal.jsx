@@ -3,8 +3,10 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '../../../shared';
 
 const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
+  const toast = useToast();
   const [tipoSeleccionado, setTipoSeleccionado] = useState('');
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [capacitacionSeleccionada, setCapacitacionSeleccionada] = useState('');
@@ -88,7 +90,7 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
     if (!tipoSeleccionado) return;
 
     if (tipoSeleccionado === 'capacitacion' && !capacitacionSeleccionada) {
-      alert('Por favor selecciona una capacitación');
+      toast.info('Por favor selecciona una capacitación');
       return;
     }
 

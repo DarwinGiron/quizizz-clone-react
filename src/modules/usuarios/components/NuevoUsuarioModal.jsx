@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../../../firebase/config";
+import { useToast } from "../../../shared";
 
 export default function NuevoUsuarioModal({ onClose, onUsuarioCreado }) {
+  const toast = useToast();
   const [form, setForm] = useState({
     nombre: "",
     codigo: "",
@@ -25,7 +27,7 @@ export default function NuevoUsuarioModal({ onClose, onUsuarioCreado }) {
 
   const handleSubmit = async () => {
     if (!form.nombre || !form.codigo || !form.area || !form.supervisor_id) {
-      alert("Completa todos los campos");
+      toast.info("Completa todos los campos");
       return;
     }
 

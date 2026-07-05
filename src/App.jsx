@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import MainLayout from './layouts/MainLayout';
 import { useConfetti } from './shared/hooks/useConfetti';
-import { SidebarProvider, AuthProvider, useAuth } from './shared';
+import { SidebarProvider, AuthProvider, useAuth, ToastProvider, ConfirmProvider } from './shared';
 
 // Cada página se importa con lazy() para que Vite genere un chunk aparte:
 // el navegador solo la descarga cuando el usuario navega a esa ruta.
@@ -77,6 +77,8 @@ function App() {
   useConfetti();
 
   return (
+    <ToastProvider>
+    <ConfirmProvider>
     <SidebarProvider>
       <AuthProvider>
       <Router>
@@ -345,6 +347,8 @@ function App() {
     </Router>
       </AuthProvider>
   </SidebarProvider>
+    </ConfirmProvider>
+    </ToastProvider>
   );
 }
 

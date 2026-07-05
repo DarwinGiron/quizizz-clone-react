@@ -5,12 +5,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Trash2, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '../../../shared';
 
 const colors = ['bg-red-500', 'bg-blue-500', 'bg-yellow-500', 'bg-green-500'];
 
 const CreateQuiz = ({ capacitacionVinculada, tipoEvaluacion }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const prefilledTitle = location.state?.titulo || (capacitacionVinculada ? `Evaluación - ${capacitacionVinculada.titulo}` : '');
   const linkedCapId = location.state?.linkedCapId || capacitacionVinculada?.id || null;
@@ -53,7 +55,7 @@ const CreateQuiz = ({ capacitacionVinculada, tipoEvaluacion }) => {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert('Debe ingresar un título');
+      toast.error('Debe ingresar un título');
       return;
     }
     setLoading(true);
@@ -68,11 +70,11 @@ const CreateQuiz = ({ capacitacionVinculada, tipoEvaluacion }) => {
       };
 
       await addDoc(collection(db, 'quizzes'), newQuiz);
-      alert('Evaluación guardada correctamente');
+      toast.success('Evaluación guardada correctamente');
       navigate('/myquizzes');
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('Hubo un error al guardar');
+      toast.error('Hubo un error al guardar');
     } finally {
       setLoading(false);
     }

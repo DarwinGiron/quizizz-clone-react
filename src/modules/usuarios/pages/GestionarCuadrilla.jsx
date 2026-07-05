@@ -15,11 +15,13 @@ import { useParams } from "react-router-dom";
 import { Trash2, Pencil, Clock, Save } from "lucide-react";
 import { startOfWeek, format } from "date-fns";
 import ImportarCuadrillaModal from "../components/ImportarCuadrillaModal";
-import { BackButton } from "../../../shared";
+import { BackButton, useToast, useConfirm } from "../../../shared";
 import { TURNO_IDS, labelTurno } from "../../asignaciones/utils/turnos";
 
 export default function GestionarCuadrilla() {
   const { supervisorId } = useParams();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [supervisor, setSupervisor] = useState(null);
   const [cuadrilla, setCuadrilla] = useState([]);
   const [mostrarImportarModal, setMostrarImportarModal] = useState(false);
@@ -52,7 +54,7 @@ export default function GestionarCuadrilla() {
 
   const agregar = async () => {
     if (!nuevo.nombre || !nuevo.area) {
-      alert("Nombre y área son obligatorios");
+      toast.error("Nombre y área son obligatorios");
       return;
     }
     await addDoc(collection(db, "cuadrilla"), {
@@ -65,7 +67,12 @@ export default function GestionarCuadrilla() {
   };
 
   const eliminar = async (id) => {
-    if (!window.confirm("¿Eliminar este miembro de la cuadrilla?")) return;
+    const ok = await confirm("¿Eliminar este miembro de la cuadrilla?", {
+      title: "Eliminar miembro",
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (!ok) return;
     await deleteDoc(doc(db, "cuadrilla", id));
     setCuadrilla((prev) => prev.filter((u) => u.id !== id));
   };
@@ -90,7 +97,7 @@ export default function GestionarCuadrilla() {
       setTimeout(() => setTurnoGuardado(false), 2500);
     } catch (error) {
       console.error("Error al guardar turno:", error);
-      alert("No se pudo guardar el turno.");
+      toast.error("No se pudo guardar el turno.");
     } finally {
       setGuardandoTurno(false);
     }

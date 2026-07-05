@@ -3,11 +3,13 @@ import { collection, getDocs, query, where, doc, updateDoc, addDoc } from 'fireb
 import { db } from '../../../firebase/config';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '../../../shared';
 
 export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate }) {
   const [bloques, setBloques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     const cargarBloques = async () => {
@@ -63,7 +65,7 @@ export default function GestionarHorariosModal({ capacitacion, onClose, onUpdate
       
     } catch (error) {
       console.error('Error al actualizar disponibilidad:', error);
-      alert('Error al actualizar la disponibilidad del horario');
+      toast.error('Error al actualizar la disponibilidad del horario');
     } finally {
       setGuardando(false);
     }

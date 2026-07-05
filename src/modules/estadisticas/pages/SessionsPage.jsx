@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { ClipboardList, Trash2, BarChart3, Inbox } from 'lucide-react';
+import { useToast } from '../../../shared';
 
 const SessionsPage = () => {
   const { id } = useParams(); // quiz ID
   const navigate = useNavigate();
+  const toast = useToast();
   const [quiz, setQuiz] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ const SessionsPage = () => {
       setSessionToDelete(null);
     } catch (error) {
       console.error('Error deleting session:', error);
-      alert('Error al eliminar la sesión. Inténtalo de nuevo.');
+      toast.error('Error al eliminar la sesión. Inténtalo de nuevo.');
     }
   };
 

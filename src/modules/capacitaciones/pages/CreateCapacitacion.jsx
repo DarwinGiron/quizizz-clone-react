@@ -4,10 +4,11 @@ import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { format, addMinutes, isBefore, parse } from 'date-fns';
 import { GraduationCap } from 'lucide-react';
-import { BackButton } from '../../../shared';
+import { BackButton, useToast } from '../../../shared';
 import { CalendarioRango } from '../components';
 
 const CreateCapacitacion = () => {
+  const toast = useToast();
   const [form, setForm] = useState({
     titulo: '',
     descripcion: '',
@@ -130,7 +131,7 @@ const CreateCapacitacion = () => {
       navigate('/capacitaciones');
     } catch (error) {
       console.error('Error al crear capacitación:', error);
-      alert('Error al crear la capacitación.');
+      toast.error('Error al crear la capacitación.');
     } finally {
       setLoading(false);
     }

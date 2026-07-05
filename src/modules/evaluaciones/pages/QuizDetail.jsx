@@ -7,11 +7,12 @@ import { Eye, Pencil, Target, EyeOff, Gamepad2, Trash2, MessageSquare, FileSprea
 import { StartLiveSessionButton } from '../components';
 import { processSessionData, fetchSessionFeedback, endLiveSession } from '../../estadisticas';
 import { exportAllSessionsToExcel } from '../../estadisticas/utils/exportReport';
-import { BackButton } from '../../../shared';
+import { BackButton, useToast } from '../../../shared';
 
 const QuizDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [quiz, setQuiz] = useState(null);
   const [showAnswers, setShowAnswers] = useState(true);
   const [activeTab, setActiveTab] = useState('questions');
@@ -92,7 +93,7 @@ const QuizDetails = () => {
       setSessionToEnd(null);
     } catch (error) {
       console.error('Error terminando sesión:', error);
-      alert('No se pudo terminar la sesión. Inténtalo de nuevo.');
+      toast.error('No se pudo terminar la sesión. Inténtalo de nuevo.');
     } finally {
       setEndingSession(false);
     }
@@ -124,7 +125,7 @@ const QuizDetails = () => {
       const q = query(collection(db, 'sessionStats'), where('quizId', '==', id));
       const snap = await getDocs(q);
       if (snap.empty) {
-        alert('No hay sesiones finalizadas para exportar.');
+        toast.info('No hay sesiones finalizadas para exportar.');
         return;
       }
       const processed = await Promise.all(
@@ -138,7 +139,7 @@ const QuizDetails = () => {
       exportAllSessionsToExcel(quiz?.title || 'Reporte', processed);
     } catch (error) {
       console.error('Error exportando todas las sesiones:', error);
-      alert('No se pudieron exportar las sesiones. Inténtalo de nuevo.');
+      toast.error('No se pudieron exportar las sesiones. Inténtalo de nuevo.');
     } finally {
       setExportingAll(false);
     }
@@ -152,7 +153,7 @@ const QuizDetails = () => {
       setSessionToDelete(null);
     } catch (error) {
       console.error('Error deleting session:', error);
-      alert('Error al eliminar la sesión. Inténtalo de nuevo.');
+      toast.error('Error al eliminar la sesión. Inténtalo de nuevo.');
     }
   };
 

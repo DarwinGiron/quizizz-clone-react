@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { Pencil, Trash2 } from 'lucide-react';
-import { BackButton } from '../../../shared';
+import { BackButton, useToast, useConfirm } from '../../../shared';
 
 const EditCapacitacion = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     const fetchCapacitacion = async () => {
@@ -20,12 +22,12 @@ const EditCapacitacion = () => {
           const data = snap.data();
           setForm(data);
         } else {
-          alert('Capacitación no encontrada');
+          toast.error('Capacitación no encontrada');
           navigate('/capacitaciones');
         }
       } catch (error) {
         console.error('Error al cargar capacitación:', error);
-        alert('Error al cargar la capacitación');
+        toast.error('Error al cargar la capacitación');
         navigate('/capacitaciones');
       }
     };
@@ -64,18 +66,22 @@ const EditCapacitacion = () => {
         await batch.commit();
       }
 
-      alert('Capacitación y bloques actualizados correctamente');
+      toast.success('Capacitación y bloques actualizados correctamente');
       navigate('/capacitaciones');
     } catch (error) {
       console.error('Error al actualizar:', error);
-      alert('Error al actualizar');
+      toast.error('Error al actualizar');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta capacitación y todos sus bloques?')) return;
+    const ok = await confirm(
+      '¿Estás seguro de que deseas eliminar esta capacitación y todos sus bloques?',
+      { title: 'Eliminar capacitación', confirmLabel: 'Eliminar', danger: true }
+    );
+    if (!ok) return;
 
     setLoading(true);
     try {
@@ -89,11 +95,11 @@ const EditCapacitacion = () => {
       // Eliminar capacitación
       await deleteDoc(doc(db, 'capacitaciones', id));
 
-      alert('Capacitación eliminada');
+      toast.success('Capacitación eliminada');
       navigate('/capacitaciones');
     } catch (error) {
       console.error(error);
-      alert('Error al eliminar');
+      toast.error('Error al eliminar');
     } finally {
       setLoading(false);
     }

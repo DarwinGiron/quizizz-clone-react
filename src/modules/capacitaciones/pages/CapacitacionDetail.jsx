@@ -14,7 +14,7 @@ import { db, auth } from '../../../firebase/config';
 import { format, parseISO, isSameDay, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { onAuthStateChanged } from 'firebase/auth';
-import { BackButton } from '../../../shared';
+import { BackButton, useToast, useConfirm } from '../../../shared';
 import {
   Calendar,
   Clock,
@@ -39,6 +39,8 @@ const CapacitacionDetail = () => {
   const [expandido, setExpandido] = useState(null);
   const [user, setUser] = useState(null);
   const [actualizando, setActualizando] = useState(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -165,7 +167,7 @@ const CapacitacionDetail = () => {
   // Función para cambiar disponibilidad de un bloque
   const toggleDisponibilidad = async (bloqueId, disponibleActual) => {
     if (!user) {
-      alert('Debes estar autenticado para realizar esta acción');
+      toast.error('Debes estar autenticado para realizar esta acción');
       return;
     }
 
@@ -195,7 +197,7 @@ const CapacitacionDetail = () => {
       }
     } catch (error) {
       console.error('Error al actualizar disponibilidad:', error);
-      alert('Error al actualizar la disponibilidad del bloque');
+      toast.error('Error al actualizar la disponibilidad del bloque');
     } finally {
       setActualizando(null);
     }
@@ -204,11 +206,15 @@ const CapacitacionDetail = () => {
   // Función para eliminar un bloque
   const eliminarBloque = async (bloqueId) => {
     if (!user) {
-      alert('Debes estar autenticado para realizar esta acción');
+      toast.error('Debes estar autenticado para realizar esta acción');
       return;
     }
 
-    if (!confirm('¿Estás seguro de que quieres eliminar este bloque? Esta acción no se puede deshacer.')) {
+    const ok = await confirm(
+      '¿Estás seguro de que quieres eliminar este bloque? Esta acción no se puede deshacer.',
+      { title: 'Eliminar bloque', confirmLabel: 'Eliminar', danger: true }
+    );
+    if (!ok) {
       return;
     }
 
@@ -228,7 +234,7 @@ const CapacitacionDetail = () => {
       }
     } catch (error) {
       console.error('Error al eliminar bloque:', error);
-      alert('Error al eliminar el bloque');
+      toast.error('Error al eliminar el bloque');
     } finally {
       setActualizando(null);
     }
@@ -237,7 +243,7 @@ const CapacitacionDetail = () => {
   // Función para habilitar todos los bloques de un día
   const habilitarTodosLosBloques = async (fecha) => {
     if (!user) {
-      alert('Debes estar autenticado para realizar esta acción');
+      toast.error('Debes estar autenticado para realizar esta acción');
       return;
     }
 
@@ -267,18 +273,22 @@ const CapacitacionDetail = () => {
       ));
     } catch (error) {
       console.error('Error al habilitar bloques:', error);
-      alert('Error al habilitar los bloques del día');
+      toast.error('Error al habilitar los bloques del día');
     }
   };
 
   // Función para deshabilitar todos los bloques de un día
   const deshabilitarTodosLosBloques = async (fecha) => {
     if (!user) {
-      alert('Debes estar autenticado para realizar esta acción');
+      toast.error('Debes estar autenticado para realizar esta acción');
       return;
     }
 
-    if (!confirm('¿Estás seguro de que quieres deshabilitar todos los bloques de este día?')) {
+    const ok = await confirm(
+      '¿Estás seguro de que quieres deshabilitar todos los bloques de este día?',
+      { title: 'Deshabilitar bloques', confirmLabel: 'Deshabilitar', danger: true }
+    );
+    if (!ok) {
       return;
     }
 
@@ -308,7 +318,7 @@ const CapacitacionDetail = () => {
       ));
     } catch (error) {
       console.error('Error al deshabilitar bloques:', error);
-      alert('Error al deshabilitar los bloques del día');
+      toast.error('Error al deshabilitar los bloques del día');
     }
   };
 

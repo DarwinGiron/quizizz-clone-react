@@ -3,8 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
-import { FiEye, FiEdit, FiTarget, FiEyeOff } from 'react-icons/fi';
-import { FaGamepad } from 'react-icons/fa';
+import { Eye, Pencil, Target, Gamepad2, Play, Download, FileSpreadsheet } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -77,29 +76,29 @@ const QuizDetails = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-800">{quiz.title}</h2>
             <p className="text-sm text-gray-600 mt-1 flex items-center gap-4">
-              <span className="flex items-center gap-1"><FiTarget /> 0% precisión</span>
-              <span className="flex items-center gap-1"><FaGamepad /> 0 jugadas</span>
+              <span className="flex items-center gap-1"><Target className="w-4 h-4" /> 0% precisión</span>
+              <span className="flex items-center gap-1"><Gamepad2 className="w-4 h-4" /> 0 jugadas</span>
             </p>
           </div>
           <div className="space-x-2 flex items-center">
-            <button onClick={() => navigate(`/preview/${id}`)} className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
-              <FiEye /> Vista previa
+            <button onClick={() => navigate(`/preview/${id}`)} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+              <Eye className="w-4 h-4" /> Vista previa
             </button>
-            <button onClick={() => navigate(`/edit/${id}`)} className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
-              <FiEdit /> Continuar editando
+            <button onClick={() => navigate(`/edit/${id}`)} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+              <Pencil className="w-4 h-4" /> Continuar editando
             </button>
           </div>
         </div>
 
         <div className="flex gap-4 mt-6">
           <button
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-shadow font-semibold"
             onClick={() => navigate(`/live/${quiz.id}`)}
           >
-            ▶ Iniciar sesión en vivo
+            <Play className="w-4 h-4" /> Iniciar sesión en vivo
           </button>
           <button
-            className="bg-gray-100 text-purple-600 px-4 py-2 rounded border border-purple-600 hover:bg-purple-50"
+            className="bg-white text-indigo-600 px-4 py-2 rounded-lg border border-indigo-300 hover:bg-indigo-50 transition-colors font-semibold"
             onClick={() => setShowExportModal(true)}
           >
             Exportar estadísticas
@@ -109,12 +108,16 @@ const QuizDetails = () => {
 
       {/* Modal de exportación */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded shadow-lg w-[90%] max-w-md">
-            <h3 className="text-lg font-bold mb-4">Exportar estadísticas de sesiones</h3>
-            <div className="flex flex-col gap-4">
-              <button onClick={exportPDF} className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700">Descargar PDF</button>
-              <button onClick={exportExcel} className="bg-green-600 text-white py-2 rounded hover:bg-green-700">Descargar Excel</button>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Exportar estadísticas de sesiones</h3>
+            <div className="flex flex-col gap-3">
+              <button onClick={exportPDF} className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2.5 rounded-lg hover:shadow-lg transition-shadow font-semibold">
+                <Download className="w-4 h-4" /> Descargar PDF
+              </button>
+              <button onClick={exportExcel} className="flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <FileSpreadsheet className="w-4 h-4" /> Descargar Excel
+              </button>
               <button onClick={() => setShowExportModal(false)} className="text-sm text-gray-500 hover:underline">Cancelar</button>
             </div>
           </div>

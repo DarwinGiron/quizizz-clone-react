@@ -12,7 +12,7 @@ import { useParams } from 'react-router-dom';
 import { db } from '../../../firebase/config';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BackButton, useAuth } from '../../../shared';
+import { BackButton, useAuth, useToast, useConfirm } from '../../../shared';
 import {
   Users,
   UserCircle,
@@ -33,6 +33,8 @@ import {
 export default function AsignacionSupervisor() {
   const { capacitacionId } = useParams();
   const { supervisorId, user } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [capacitacion, setCapacitacion] = useState(null);
   const [bloques, setBloques] = useState([]);
@@ -136,11 +138,11 @@ export default function AsignacionSupervisor() {
 
     const validacion = puedeAgregar(persona, bloque, config);
     if (!validacion.ok) {
-      alert(validacion.motivo);
+      toast.error(validacion.motivo);
       return;
     }
     if (estaAsignado(persona.id)) {
-      alert('Esta persona ya está asignada en esta capacitación.');
+      toast.error('Esta persona ya está asignada en esta capacitación.');
       return;
     }
 
@@ -160,7 +162,7 @@ export default function AsignacionSupervisor() {
       );
     } catch (error) {
       console.error('Error al asignar:', error);
-      alert('No se pudo asignar. Intenta de nuevo.');
+      toast.error('No se pudo asignar. Intenta de nuevo.');
     } finally {
       setAccionEnCurso(false);
     }
@@ -170,14 +172,18 @@ export default function AsignacionSupervisor() {
     if (accionEnCurso) return;
     // Solo puede quitar a quien él asignó.
     if (participante.supervisor_id !== supervisorId) {
-      alert('Solo puedes quitar al personal que tú asignaste.');
+      toast.error('Solo puedes quitar al personal que tú asignaste.');
       return;
     }
     const nombre = participante.codigo
       ? `${participante.codigo} - ${participante.nombre}`
       : participante.nombre;
-    if (!window.confirm(`¿Quitar a ${nombre} del horario ${bloque.hora_inicio}?`))
-      return;
+    const ok = await confirm(`¿Quitar a ${nombre} del horario ${bloque.hora_inicio}?`, {
+      title: 'Quitar participante',
+      confirmLabel: 'Quitar',
+      danger: true,
+    });
+    if (!ok) return;
 
     const nuevos = (bloque.participantes || []).filter(
       (p) => p.id !== participante.id
@@ -195,7 +201,7 @@ export default function AsignacionSupervisor() {
       );
     } catch (error) {
       console.error('Error al desasignar:', error);
-      alert('No se pudo quitar. Intenta de nuevo.');
+      toast.error('No se pudo quitar. Intenta de nuevo.');
     } finally {
       setAccionEnCurso(false);
     }

@@ -7,13 +7,15 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../firebase/config';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BackButton } from '../../../shared';
+import { BackButton, useToast, useConfirm } from '../../../shared';
 import { Users, UserCircle, Calendar, GripVertical, Lightbulb, SlidersHorizontal, Zap } from 'lucide-react';
 import ConfigCuotasModal from '../components/ConfigCuotasModal';
 import ConvocatoriaModal from '../components/ConvocatoriaModal';
 
 export default function AsignacionIntuitiva() {
   const { capacitacionId } = useParams();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [capacitacion, setCapacitacion] = useState(null);
   const [bloques, setBloques] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -414,13 +416,13 @@ export default function AsignacionIntuitiva() {
     // Verificar si hay cupo disponible
     const ocupados = bloque.participantes?.length || 0;
     if (ocupados >= bloque.cupo_disponible) {
-      alert('Este horario ya está lleno');
+      toast.error('Este horario ya está lleno');
       return;
     }
 
     // Verificar si la persona ya está asignada a este bloque
     if (bloque.participantes?.some(p => p.id === draggedPerson.id)) {
-      alert('Esta persona ya está asignada a este horario');
+      toast.error('Esta persona ya está asignada a este horario');
       return;
     }
 
@@ -455,7 +457,7 @@ export default function AsignacionIntuitiva() {
 
     } catch (error) {
       console.error('Error al asignar:', error);
-      alert('Error al asignar la persona. Por favor, intente nuevamente.');
+      toast.error('Error al asignar la persona. Por favor, intente nuevamente.');
     }
 
     setDraggedPerson(null);
@@ -464,7 +466,7 @@ export default function AsignacionIntuitiva() {
   // Función para asignar personal por código
   const handleAsignarPorCodigo = async (bloque) => {
     if (!codigoPersonal.trim()) {
-      alert('Por favor, ingrese un código de personal válido');
+      toast.info('Por favor, ingrese un código de personal válido');
       return;
     }
 
@@ -481,20 +483,20 @@ export default function AsignacionIntuitiva() {
     });
 
     if (!personaEncontrada) {
-      alert('No se encontró ninguna persona con ese código');
+      toast.error('No se encontró ninguna persona con ese código');
       return;
     }
 
     // Verificar si hay cupo disponible
     const ocupados = bloque.participantes?.length || 0;
     if (ocupados >= bloque.cupo_disponible) {
-      alert('Este horario ya está lleno');
+      toast.error('Este horario ya está lleno');
       return;
     }
 
     // Verificar si la persona ya está asignada a este bloque
     if (bloque.participantes?.some(p => p.id === personaEncontrada.id)) {
-      alert('Esta persona ya está asignada a este horario');
+      toast.error('Esta persona ya está asignada a este horario');
       return;
     }
 
@@ -544,7 +546,7 @@ export default function AsignacionIntuitiva() {
 
     } catch (error) {
       console.error('Error al asignar:', error);
-      alert('Error al asignar la persona. Por favor, intente nuevamente.');
+      toast.error('Error al asignar la persona. Por favor, intente nuevamente.');
     }
   };
 
@@ -562,8 +564,12 @@ export default function AsignacionIntuitiva() {
     // Confirmación antes de eliminar
     const codigoPersonal = participante.codigo || participante.codigoPersonal;
     const identificador = codigoPersonal ? `${codigoPersonal} - ${participante.nombre}` : participante.nombre;
-    
-    if (!window.confirm(`¿Estás seguro de que quieres desasignar a ${identificador} del horario ${bloque.hora_inicio} - ${bloque.hora_fin}?`)) {
+
+    const ok = await confirm(
+      `¿Estás seguro de que quieres desasignar a ${identificador} del horario ${bloque.hora_inicio} - ${bloque.hora_fin}?`,
+      { title: 'Desasignar participante', confirmLabel: 'Desasignar', danger: true }
+    );
+    if (!ok) {
       return;
     }
 
@@ -609,7 +615,7 @@ export default function AsignacionIntuitiva() {
 
     } catch (error) {
       console.error('Error al desasignar:', error);
-      alert('Error al desasignar la persona. Por favor, intente nuevamente.');
+      toast.error('Error al desasignar la persona. Por favor, intente nuevamente.');
     }
   };
 
