@@ -1,70 +1,86 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthState } from 'react-firebase-hooks/auth';
 
-import { auth } from './firebase/config';
 import MainLayout from './layouts/MainLayout';
 import { useConfetti } from './shared/hooks/useConfetti';
-import { SidebarProvider } from './shared';
+import { SidebarProvider, AuthProvider, useAuth } from './shared';
 
-// Importaciones desde los módulos organizados
-import {
-  // Autenticación
-  Login,
-  Register,
+// Cada página se importa con lazy() para que Vite genere un chunk aparte:
+// el navegador solo la descarga cuando el usuario navega a esa ruta.
 
-  // Dashboard
-  Dashboard,
+// Autenticación
+const Login = lazy(() => import('./modules/auth/pages/Login'));
+const Register = lazy(() => import('./modules/auth/pages/Register'));
 
-  // Evaluaciones
-  CreateQuiz,
-  MyQuizzes,
-  QuizDetail,
-  PreviewQuiz,
-  EditQuiz,
-  LiveSession,
-  JoinSession,
-  SeleccionTipoEvaluacion,
+// Dashboard
+const Dashboard = lazy(() => import('./modules/dashboard/pages/Dashboard'));
 
-  // Estadísticas
-  SessionsPage,
-  SessionReport,
-  SessionStats,
-  SessionStatsAdmin,
-  EstadisticasTotales,
+// Evaluaciones
+const CreateQuiz = lazy(() => import('./modules/evaluaciones/pages/CreateQuiz'));
+const MyQuizzes = lazy(() => import('./modules/evaluaciones/pages/MyQuizzes'));
+const QuizDetail = lazy(() => import('./modules/evaluaciones/pages/QuizDetail'));
+const PreviewQuiz = lazy(() => import('./modules/evaluaciones/pages/PreviewQuiz'));
+const EditQuiz = lazy(() => import('./modules/evaluaciones/pages/EditQuiz'));
+const LiveSession = lazy(() => import('./modules/evaluaciones/pages/LiveSession'));
+const JoinSession = lazy(() => import('./modules/evaluaciones/pages/JoinSession'));
+const SeleccionTipoEvaluacion = lazy(() => import('./modules/evaluaciones/components/SeleccionTipoEvaluacion'));
 
-  // Capacitaciones
-  EditCapacitacion,
-  CapacitacionDetail,
-  CapacitacionesDashboard,
-  CreateCapacitacion,
-  HorariosPorCapacitacion,
+// Estadísticas
+const SessionsPage = lazy(() => import('./modules/estadisticas/pages/SessionsPage'));
+const SessionReport = lazy(() => import('./modules/estadisticas/pages/SessionReport'));
+const SessionStats = lazy(() => import('./modules/estadisticas/components/SessionStats'));
+const SessionStatsAdmin = lazy(() => import('./modules/estadisticas/pages/SessionStatsAdmin'));
+const EstadisticasTotales = lazy(() => import('./modules/estadisticas/pages/EstadisticasTotales'));
 
-  // Asignaciones
-  Asignaciones,
-  AsignacionAvanzada,
-  AsignacionIntuitiva,
+// Capacitaciones
+const EditCapacitacion = lazy(() => import('./modules/capacitaciones/pages/EditCapacitacion'));
+const CapacitacionDetail = lazy(() => import('./modules/capacitaciones/pages/CapacitacionDetail'));
+const CapacitacionesDashboard = lazy(() => import('./modules/capacitaciones/pages/CapacitacionesDashboard'));
+const CreateCapacitacion = lazy(() => import('./modules/capacitaciones/pages/CreateCapacitacion'));
+const HorariosPorCapacitacion = lazy(() => import('./modules/capacitaciones/pages/HorariosPorCapacitacion'));
 
-  // Usuarios
-  UsuariosAdmin,
-  GestionarCuadrilla,
-} from './modules';
+// Asignaciones
+const Asignaciones = lazy(() => import('./modules/asignaciones/pages/Asignaciones'));
+const AsignacionIntuitiva = lazy(() => import('./modules/asignaciones/pages/AsignacionIntuitiva'));
+const AsignacionSupervisor = lazy(() => import('./modules/asignaciones/pages/AsignacionSupervisor'));
+const MisAsignaciones = lazy(() => import('./modules/asignaciones/pages/MisAsignaciones'));
 
-// Componente para rutas privadas
-function PrivateRoute({ children }) {
-  const [user, loading] = useAuthState(auth);
+// Usuarios
+const UsuariosAdmin = lazy(() => import('./modules/usuarios/pages/UsuariosAdmin'));
+const GestionarCuadrilla = lazy(() => import('./modules/usuarios/pages/GestionarCuadrilla'));
+
+// Se muestra brevemente mientras el navegador descarga el chunk de la ruta
+function RouteFallback() {
+  return (
+    <div className="flex flex-col justify-center items-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+    </div>
+  );
+}
+
+// Componente para rutas privadas (con control opcional por rol)
+function PrivateRoute({ children, roles }) {
+  const { user, loading } = useAuth();
   if (loading) return <div className="p-10">Cargando...</div>;
-  return user ? children : <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
+  if (roles && !roles.includes(user.rol)) {
+    return (
+      <Navigate
+        to={user.rol === 'supervisor' ? '/mis-asignaciones' : '/dashboard'}
+      />
+    );
+  }
+  return children;
 }
 
 function App() {
   useConfetti();
 
-  const [user] = useAuthState(auth);
-
   return (
     <SidebarProvider>
+      <AuthProvider>
       <Router>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           {/* Rutas públicas */}
           <Route path="/login" element={<Login />} />
@@ -266,21 +282,33 @@ function App() {
           }
         />
         <Route
-          path="/asignaciones/avanzada/:capacitacionId"
-          element={
-            <PrivateRoute>
-              <MainLayout>
-                <AsignacionAvanzada />
-              </MainLayout>
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/asignaciones/intuitiva/:capacitacionId"
           element={
             <PrivateRoute>
               <MainLayout>
                 <AsignacionIntuitiva />
+              </MainLayout>
+            </PrivateRoute>
+          }
+        />
+
+        {/* Vista exclusiva del supervisor */}
+        <Route
+          path="/mis-asignaciones"
+          element={
+            <PrivateRoute roles={['supervisor', 'admin']}>
+              <MainLayout>
+                <MisAsignaciones />
+              </MainLayout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/mis-asignaciones/:capacitacionId"
+          element={
+            <PrivateRoute roles={['supervisor', 'admin']}>
+              <MainLayout>
+                <AsignacionSupervisor />
               </MainLayout>
             </PrivateRoute>
           }
@@ -313,7 +341,9 @@ function App() {
         {/* Fallback: cualquier ruta no definida redirige a login */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
+        </Suspense>
     </Router>
+      </AuthProvider>
   </SidebarProvider>
   );
 }

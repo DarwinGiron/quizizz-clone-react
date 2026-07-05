@@ -29,7 +29,7 @@ const StartLiveSessionButton = ({ quizId }) => {
   return (
     <button
       onClick={startSession}
-      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-semibold shadow"
+      className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-shadow"
     >
       ▶ Iniciar sesión en vivo
     </button>

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase/config";
 import { useNavigate } from "react-router-dom";
+import { startOfWeek, format } from "date-fns";
+import { TURNO_IDS, labelTurno } from "../../asignaciones/utils/turnos";
 
 export default function NuevoSupervisorModal({ onClose }) {
   const navigate = useNavigate();
@@ -11,6 +13,7 @@ export default function NuevoSupervisorModal({ onClose }) {
     contraseña: "",
     codigo: "",
     rol: "supervisor",
+    turno: "dia",
   });
 
   const handleSubmit = async () => {
@@ -27,7 +30,11 @@ export default function NuevoSupervisorModal({ onClose }) {
       return;
     }
 
-    await addDoc(collection(db, "usuarios"), form);
+    const turno_semana = format(
+      startOfWeek(new Date(), { weekStartsOn: 1 }),
+      "yyyy-MM-dd"
+    );
+    await addDoc(collection(db, "usuarios"), { ...form, turno_semana });
 
     // Redirige a /usuarios y recarga la página
     navigate("/usuarios", { replace: true });
@@ -65,6 +72,22 @@ export default function NuevoSupervisorModal({ onClose }) {
             onChange={(e) => setForm({ ...form, contraseña: e.target.value })}
             className="border p-2 rounded w-full"
           />
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Turno (semana actual)
+            </label>
+            <select
+              value={form.turno}
+              onChange={(e) => setForm({ ...form, turno: e.target.value })}
+              className="border p-2 rounded w-full bg-white"
+            >
+              {TURNO_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {labelTurno(id)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="flex justify-end space-x-2">

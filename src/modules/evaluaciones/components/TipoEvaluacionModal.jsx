@@ -177,7 +177,7 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
                 
                 {loading ? (
                   <div className="flex items-center gap-2 text-gray-500">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
                     <span>Cargando capacitaciones...</span>
                   </div>
                 ) : (
@@ -262,7 +262,7 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
             <button
               type="submit"
               disabled={!tipoSeleccionado || (tipoSeleccionado === 'capacitacion' && !capacitacionSeleccionada)}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               Continuar
             </button>

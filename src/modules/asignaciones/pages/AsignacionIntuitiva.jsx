@@ -8,7 +8,9 @@ import { auth, db } from '../../../firebase/config';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BackButton } from '../../../shared';
-import { Users, UserCircle, Calendar, GripVertical, Lightbulb } from 'lucide-react';
+import { Users, UserCircle, Calendar, GripVertical, Lightbulb, SlidersHorizontal, Zap } from 'lucide-react';
+import ConfigCuotasModal from '../components/ConfigCuotasModal';
+import ConvocatoriaModal from '../components/ConvocatoriaModal';
 
 export default function AsignacionIntuitiva() {
   const { capacitacionId } = useParams();
@@ -41,6 +43,10 @@ export default function AsignacionIntuitiva() {
   
   // Estado para forzar re-render
   const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Modales solo admin
+  const [mostrarConfigCuotas, setMostrarConfigCuotas] = useState(false);
+  const [mostrarConvocatoria, setMostrarConvocatoria] = useState(false);
 
   // Funciones auxiliares para fechas
   const createLocalDate = (dateString) => {
@@ -639,9 +645,29 @@ export default function AsignacionIntuitiva() {
         
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Asignación Intuitiva de Personal
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Asignación Intuitiva de Personal
+            </h1>
+            {esAdmin && (
+              <div className="flex-shrink-0 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setMostrarConfigCuotas(true)}
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium shadow-sm"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Configurar cuotas
+                </button>
+                <button
+                  onClick={() => setMostrarConvocatoria(true)}
+                  className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 transition text-sm font-medium shadow-sm"
+                >
+                  <Zap className="w-4 h-4" />
+                  Convocatoria automática
+                </button>
+              </div>
+            )}
+          </div>
           {capacitacion && (
             <p className="text-gray-600 mb-4">
               <span className="font-semibold text-purple-700">{capacitacion.titulo}</span>
@@ -1317,6 +1343,35 @@ export default function AsignacionIntuitiva() {
           </div>
         </div>
       </div>
+
+      {mostrarConfigCuotas && (
+        <ConfigCuotasModal
+          capacitacionId={capacitacionId}
+          configInicial={capacitacion?.asignacion_config}
+          clavesSugeridas={[...areasDisponibles, ...maquinasDisponibles]}
+          onClose={() => setMostrarConfigCuotas(false)}
+          onSaved={(nuevaConfig) =>
+            setCapacitacion((prev) =>
+              prev ? { ...prev, asignacion_config: nuevaConfig } : prev
+            )
+          }
+        />
+      )}
+
+      {mostrarConvocatoria && (
+        <ConvocatoriaModal
+          capacitacion={capacitacion}
+          bloques={bloques}
+          onClose={() => setMostrarConvocatoria(false)}
+          onAplicado={(updates) =>
+            setBloques((prev) =>
+              prev.map((b) =>
+                updates[b.id] ? { ...b, participantes: updates[b.id] } : b
+              )
+            )
+          }
+        />
+      )}
     </div>
   );
 }

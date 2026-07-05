@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../firebase/config';
+import { useAuth } from '../../../shared';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, LogIn, GraduationCap } from 'lucide-react';
@@ -12,6 +13,7 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { loginSupervisor } = useAuth();
 
   const traducirError = (code) => {
     switch (code) {
@@ -33,6 +35,14 @@ const Login = () => {
     setError(null);
     setIsLoading(true);
     try {
+      // 1) Intentar login custom de supervisor (colección `usuarios`).
+      const result = await loginSupervisor(email, password);
+      if (result.ok) {
+        navigate('/mis-asignaciones');
+        return;
+      }
+
+      // 2) Si no es supervisor, intentar Firebase Auth (admin / usuario).
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/dashboard');
     } catch (err) {
@@ -97,13 +107,13 @@ const Login = () => {
               {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Correo electrónico
+                  Correo o usuario
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
-                    type="email"
-                    placeholder="tu@email.com"
+                    type="text"
+                    placeholder="tu@email.com o usuario"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

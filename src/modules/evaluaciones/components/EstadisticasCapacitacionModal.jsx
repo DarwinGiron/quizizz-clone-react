@@ -132,7 +132,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
             Análisis de participación para: <strong>{quiz?.title}</strong>
           </p>
           {quiz?.capacitacionVinculada && (
-            <p className="text-purple-600 text-sm mt-1">
+            <p className="text-indigo-600 text-sm mt-1">
               Vinculada a: {quiz.capacitacionVinculada.titulo}
             </p>
           )}
@@ -142,7 +142,7 @@ const EstadisticasCapacitacionModal = ({ isOpen, onClose, quiz }) => {
         <div className="p-6">
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
               <span className="ml-3 text-gray-600">Cargando estadísticas...</span>
             </div>
           ) : error ? (

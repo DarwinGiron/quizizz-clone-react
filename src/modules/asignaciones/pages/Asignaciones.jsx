@@ -1,94 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import React, { useEffect, useRef, useState } from 'react';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   Calendar,
   Clock,
   Users,
-  Sparkles,
-  SlidersHorizontal,
   ClipboardList,
-  ArrowRight,
-  Hand,
-  CalendarRange,
-  Zap,
+  MoreVertical,
+  XCircle,
 } from 'lucide-react';
-
-const DATOS_EJEMPLO = [
-  {
-    id: 'ejemplo1',
-    titulo: 'Seguridad Industrial y Prevención de Riesgos',
-    descripcion:
-      'Capacitación integral sobre normas de seguridad, identificación de riesgos y uso correcto de equipos de protección personal en el ambiente laboral.',
-    fechaInicio: '2025-01-15',
-    fechaFin: '2025-01-30',
-    duracionBloque: 60,
-    cupoBloque: 25,
-  },
-  {
-    id: 'ejemplo2',
-    titulo: 'Manejo de Equipos Pesados',
-    descripcion:
-      'Curso práctico para la operación segura y eficiente de maquinaria pesada, incluyendo mantenimiento básico y procedimientos de emergencia.',
-    fechaInicio: '2025-01-20',
-    fechaFin: '2025-02-05',
-    duracionBloque: 90,
-    cupoBloque: 15,
-  },
-  {
-    id: 'ejemplo3',
-    titulo: 'Primeros Auxilios en el Trabajo',
-    descripcion:
-      'Formación esencial en técnicas de primeros auxilios, RCP y manejo de emergencias médicas en el entorno laboral.',
-    fechaInicio: '2025-02-01',
-    fechaFin: '2025-02-10',
-    duracionBloque: 45,
-    cupoBloque: 20,
-  },
-  {
-    id: 'ejemplo4',
-    titulo: 'Liderazgo y Gestión de Equipos',
-    descripcion:
-      'Desarrollo de habilidades directivas, comunicación efectiva y técnicas de motivación para supervisores y jefes de cuadrilla.',
-    fechaInicio: '2025-01-10',
-    fechaFin: '2025-01-12',
-    duracionBloque: 120,
-    cupoBloque: 12,
-  },
-  {
-    id: 'ejemplo5',
-    titulo: 'Calidad y Mejora Continua',
-    descripcion:
-      'Metodologías de control de calidad, implementación de mejoras y optimización de procesos productivos.',
-    fechaInicio: '2025-03-01',
-    fechaFin: '2025-03-15',
-    duracionBloque: 75,
-    cupoBloque: 30,
-  },
-];
 
 export default function Asignaciones() {
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [menuAbierto, setMenuAbierto] = useState(null);
+  const [cerrando, setCerrando] = useState(null);
+  const menuRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Normaliza los campos para soportar datos en snake_case (reales) y camelCase
+  const normalizar = (cap) => ({
+    ...cap,
+    titulo: cap.titulo ?? cap.nombre ?? '',
+    descripcion: cap.descripcion ?? '',
+    fechaInicio: cap.fecha_inicio ?? cap.fechaInicio ?? null,
+    fechaFin: cap.fecha_fin ?? cap.fechaFin ?? null,
+    duracionBloque: cap.duracion_bloque ?? cap.duracionBloque ?? null,
+    cupoBloque: cap.cupo_bloque ?? cap.cupoBloque ?? null,
+  });
 
   useEffect(() => {
     const fetchCapacitaciones = async () => {
       try {
         const ref = collection(db, 'capacitaciones');
         const snapshot = await getDocs(ref);
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setCapacitaciones(data.length === 0 ? DATOS_EJEMPLO : data);
+        const data = snapshot.docs
+          .map((d) => normalizar({ id: d.id, ...d.data() }))
+          // Solo asignaciones activas (no cerradas manualmente)
+          .filter((cap) => cap.asignacion_cerrada !== true);
+        setCapacitaciones(data);
       } catch (error) {
         console.error('Error al cargar capacitaciones:', error);
-        setCapacitaciones(DATOS_EJEMPLO);
+        setCapacitaciones([]);
       } finally {
         setLoading(false);
       }
     };
     fetchCapacitaciones();
+  }, []);
+
+  // Cerrar el menú al hacer click fuera
+  useEffect(() => {
+    const handleClickFuera = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuAbierto(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickFuera);
+    return () => document.removeEventListener('mousedown', handleClickFuera);
   }, []);
 
   const formatDate = (dateString) => {
@@ -98,24 +70,6 @@ export default function Asignaciones() {
     } catch {
       return 'Fecha inválida';
     }
-  };
-
-  const getStatusColor = (fechaInicio, fechaFin) => {
-    const now = new Date();
-    const inicio = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
-    if (now < inicio) return 'bg-blue-100 text-blue-800';
-    if (now > fin) return 'bg-gray-100 text-gray-800';
-    return 'bg-green-100 text-green-800';
-  };
-
-  const getStatusText = (fechaInicio, fechaFin) => {
-    const now = new Date();
-    const inicio = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
-    if (now < inicio) return 'Próximamente';
-    if (now > fin) return 'Finalizada';
-    return 'En progreso';
   };
 
   const calculateDuration = (fechaInicio, fechaFin) => {
@@ -141,6 +95,28 @@ export default function Asignaciones() {
     }
   };
 
+  const abrirAsignacion = (capId) => {
+    navigate(`/asignaciones/intuitiva/${capId}`);
+  };
+
+  const cerrarAsignacion = async (capId) => {
+    setMenuAbierto(null);
+    setCerrando(capId);
+    try {
+      await updateDoc(doc(db, 'capacitaciones', capId), {
+        asignacion_cerrada: true,
+        fecha_cierre: new Date().toISOString(),
+      });
+      // Quitar de la lista de activas en pantalla
+      setCapacitaciones((prev) => prev.filter((cap) => cap.id !== capId));
+    } catch (error) {
+      console.error('Error al cerrar la asignación:', error);
+      alert('No se pudo cerrar la asignación. Intenta de nuevo.');
+    } finally {
+      setCerrando(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
@@ -163,34 +139,10 @@ export default function Asignaciones() {
           Gestiona y asigna personal a las capacitaciones disponibles.
         </p>
 
-        {/* Banner de características */}
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-4 border border-indigo-200">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-sm font-semibold text-indigo-900">
-              Nueva experiencia de asignación
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-indigo-800">
-            <div className="flex items-center gap-2">
-              <Hand className="w-4 h-4" />
-              <span>Arrastra y suelta personal</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CalendarRange className="w-4 h-4" />
-              <span>Vista semanal completa</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              <span>Asignación en tiempo real</span>
-            </div>
-          </div>
-        </div>
-
         {capacitaciones.length > 0 && (
           <div className="text-sm text-gray-500">
-            {capacitaciones.length} capacitación
-            {capacitaciones.length !== 1 ? 'es' : ''} disponible
+            {capacitaciones.length} asignación
+            {capacitaciones.length !== 1 ? 'es' : ''} activa
             {capacitaciones.length !== 1 ? 's' : ''}
           </div>
         )}
@@ -201,7 +153,7 @@ export default function Asignaciones() {
           <div className="bg-white rounded-xl shadow-sm p-8 max-w-md mx-auto">
             <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No hay capacitaciones disponibles
+              No hay asignaciones activas
             </h3>
             <p className="text-gray-500 mb-4">
               Crea una nueva capacitación para comenzar a asignar horarios.
@@ -219,7 +171,18 @@ export default function Asignaciones() {
           {capacitaciones.map((cap) => (
             <div
               key={cap.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
+              role="button"
+              tabIndex={0}
+              onClick={() => abrirAsignacion(cap.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  abrirAsignacion(cap.id);
+                }
+              }}
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                cerrando === cap.id ? 'opacity-50 pointer-events-none' : ''
+              }`}
             >
               {/* Header de la tarjeta */}
               <div className="p-6 pb-4">
@@ -227,14 +190,48 @@ export default function Asignaciones() {
                   <h2 className="text-lg font-bold text-gray-900 leading-tight line-clamp-2">
                     {cap.titulo || 'Sin título'}
                   </h2>
-                  <span
-                    className={`flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                      cap.fechaInicio,
-                      cap.fechaFin
-                    )}`}
-                  >
-                    {getStatusText(cap.fechaInicio, cap.fechaFin)}
-                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Activa
+                    </span>
+                    {/* Menú de 3 puntitos */}
+                    <div
+                      className="relative"
+                      ref={menuAbierto === cap.id ? menuRef : null}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuAbierto(
+                            menuAbierto === cap.id ? null : cap.id
+                          );
+                        }}
+                        className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                        aria-label="Opciones de la asignación"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+                      {menuAbierto === cap.id && (
+                        <div
+                          className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cerrarAsignacion(cap.id);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition text-left"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Cerrar asignación
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
                   {cap.descripcion || 'Sin descripción disponible.'}
@@ -242,7 +239,7 @@ export default function Asignaciones() {
               </div>
 
               {/* Detalles */}
-              <div className="px-6 pb-4 flex-1">
+              <div className="px-6 pb-6 flex-1">
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-gray-500">
                     <Calendar className="w-4 h-4 flex-shrink-0" />
@@ -271,32 +268,6 @@ export default function Asignaciones() {
                       <span>Hasta {cap.cupoBloque} participantes por bloque</span>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Acciones */}
-              <div className="px-6 pb-6">
-                <div className="space-y-2">
-                  <Link
-                    to={`/asignaciones/intuitiva/${cap.id}`}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-lg hover:shadow-lg transition-all duration-200 text-sm font-medium shadow-sm"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Asignación Intuitiva
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    to={`/asignaciones/avanzada/${cap.id}`}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 text-sm font-medium border border-gray-300"
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    Modo Avanzado
-                  </Link>
-                </div>
-                <div className="flex justify-center mt-2">
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                    Recomendado: interfaz intuitiva
-                  </span>
                 </div>
               </div>
             </div>

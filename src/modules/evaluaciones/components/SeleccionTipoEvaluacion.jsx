@@ -39,8 +39,8 @@ const SeleccionTipoEvaluacion = () => {
       <div className="space-y-4">
         <div
           onClick={() => setModo('vinculada')}
-          className={`border rounded p-4 cursor-pointer hover:bg-purple-50 ${
-            modo === 'vinculada' ? 'border-purple-600 bg-purple-50' : ''
+          className={`border rounded p-4 cursor-pointer hover:bg-indigo-50 ${
+            modo === 'vinculada' ? 'border-indigo-600 bg-indigo-50' : ''
           }`}
         >
           <strong>Vincular a capacitación existente</strong>
@@ -49,8 +49,8 @@ const SeleccionTipoEvaluacion = () => {
 
         <div
           onClick={() => setModo('independiente')}
-          className={`border rounded p-4 cursor-pointer hover:bg-purple-50 ${
-            modo === 'independiente' ? 'border-purple-600 bg-purple-50' : ''
+          className={`border rounded p-4 cursor-pointer hover:bg-indigo-50 ${
+            modo === 'independiente' ? 'border-indigo-600 bg-indigo-50' : ''
           }`}
         >
           <strong>Evaluación independiente</strong>
@@ -91,7 +91,7 @@ const SeleccionTipoEvaluacion = () => {
 
       <button
         onClick={handleContinuar}
-        className="mt-6 bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700"
+        className="mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-shadow font-semibold"
       >
         Continuar
       </button>

@@ -1,23 +1,24 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  FiHome, 
-  FiLogOut, 
-  FiUsers, 
-  FiBookOpen, 
-  FiCalendar, 
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  FiHome,
+  FiLogOut,
+  FiUsers,
+  FiBookOpen,
+  FiCalendar,
   FiTarget,
   FiLayers,
   FiChevronLeft,
   FiChevronRight
 } from 'react-icons/fi';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase/config';
 import { useSidebar } from '../contexts/SidebarContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { user, isSupervisor, logout } = useAuth();
 
   const isActive = (path) => {
     if (path === '/myquizzes') {
@@ -26,8 +27,18 @@ const Sidebar = () => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
+  // Navegación para supervisores: solo su vista exclusiva.
+  const supervisorNav = [
+    {
+      path: '/mis-asignaciones',
+      icon: FiTarget,
+      label: 'Mis Asignaciones',
+      description: 'Asignar mi cuadrilla'
+    }
+  ];
 
-  const navItems = [
+  // Navegación completa (admin / usuarios autoregistrados).
+  const adminNav = [
     {
       path: '/dashboard',
       icon: FiHome,
@@ -60,6 +71,13 @@ const Sidebar = () => {
     }
   ];
 
+  const navItems = isSupervisor ? supervisorNav : adminNav;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
       {/* Sidebar moderno con toggle */}
@@ -82,7 +100,9 @@ const Sidebar = () => {
           
           <div>
             <h1 className="text-xl font-bold text-white text-center mb-2">Cuestionary</h1>
-            <p className="text-xs text-gray-400 text-center">Sistema de evaluación</p>
+            <p className="text-xs text-gray-400 text-center">
+              {isSupervisor ? `Supervisor · ${user?.nombre || ''}` : 'Sistema de evaluación'}
+            </p>
           </div>
         </div>
 
@@ -130,7 +150,7 @@ const Sidebar = () => {
         {/* Footer */}
         <div className="border-t border-gray-700 p-4">
           <button
-            onClick={() => signOut(auth)}
+            onClick={handleLogout}
             className="group w-full flex items-center transition-all duration-200 rounded-xl px-4 py-3 text-gray-300 hover:bg-red-500/20 hover:text-red-300"
           >
             <FiLogOut size={20} className="transition-colors flex-shrink-0" />
