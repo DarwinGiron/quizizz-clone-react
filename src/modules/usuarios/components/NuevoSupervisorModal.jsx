@@ -4,11 +4,12 @@ import { db } from "../../../firebase/config";
 import { useNavigate } from "react-router-dom";
 import { startOfWeek, format } from "date-fns";
 import { TURNO_IDS, labelTurno } from "../../asignaciones/utils/turnos";
-import { useToast } from "../../../shared";
+import { useToast, usuarioToEmail, crearCuentaAuth } from "../../../shared";
 
 export default function NuevoSupervisorModal({ onClose }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     usuario: "",
@@ -19,9 +20,13 @@ export default function NuevoSupervisorModal({ onClose }) {
   });
 
   const handleSubmit = async () => {
-    const { nombre, usuario, contraseña, codigo } = form;
+    const { nombre, usuario, contraseña, codigo, ...resto } = form;
     if (!nombre || !usuario || !contraseña || !codigo) {
       toast.error("Completa todos los campos");
+      return;
+    }
+    if (contraseña.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
@@ -32,21 +37,45 @@ export default function NuevoSupervisorModal({ onClose }) {
       return;
     }
 
-    const turno_semana = format(
-      startOfWeek(new Date(), { weekStartsOn: 1 }),
-      "yyyy-MM-dd"
-    );
-    await addDoc(collection(db, "usuarios"), { ...form, turno_semana });
+    setGuardando(true);
+    try {
+      // Cuenta real de Firebase Auth con email sintético (usuario@supervisores.app).
+      // Se crea con una instancia secundaria para no cerrar la sesión del admin.
+      const authUid = await crearCuentaAuth(usuarioToEmail(usuario), contraseña);
 
-    // Redirige a /usuarios y recarga la página
-    navigate("/usuarios", { replace: true });
-    window.location.reload();
+      const turno_semana = format(
+        startOfWeek(new Date(), { weekStartsOn: 1 }),
+        "yyyy-MM-dd"
+      );
+      // Sin campo de contraseña: la validación vive en Firebase Auth, no en Firestore.
+      await addDoc(collection(db, "usuarios"), {
+        nombre,
+        usuario,
+        codigo,
+        authUid,
+        ...resto,
+        turno_semana,
+      });
+
+      navigate("/usuarios", { replace: true });
+      window.location.reload();
+    } catch (error) {
+      if (error.code === "auth/email-already-in-use") {
+        toast.error("Ese nombre de usuario ya tiene una cuenta de acceso.");
+      } else if (error.code === "auth/weak-password") {
+        toast.error("La contraseña es demasiado débil.");
+      } else {
+        console.error("Error al crear supervisor:", error);
+        toast.error("No se pudo crear el supervisor. Intenta de nuevo.");
+      }
+      setGuardando(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-bold mb-4 text-purple-700">Nuevo Supervisor</h2>
+        <h2 className="text-xl font-bold mb-4 text-indigo-700">Nuevo Supervisor</h2>
 
         <div className="space-y-4 mb-4">
           <input
@@ -62,7 +91,7 @@ export default function NuevoSupervisorModal({ onClose }) {
             className="border p-2 rounded w-full"
           />
           <input
-            placeholder="Correo o usuario"
+            placeholder="Nombre de usuario (sin espacios, ej. jperez)"
             value={form.usuario}
             onChange={(e) => setForm({ ...form, usuario: e.target.value })}
             className="border p-2 rounded w-full"
@@ -95,15 +124,20 @@ export default function NuevoSupervisorModal({ onClose }) {
         <div className="flex justify-end space-x-2">
           <button
             onClick={onClose}
-            className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
+            disabled={guardando}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg disabled:opacity-60"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
+            disabled={guardando}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-shadow disabled:opacity-60"
           >
-            Crear Supervisor
+            {guardando && (
+              <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            )}
+            {guardando ? "Creando..." : "Crear Supervisor"}
           </button>
         </div>
       </div>

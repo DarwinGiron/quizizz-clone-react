@@ -19,4 +19,4 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app); // Aquí se obtiene RTDB
 const auth = getAuth(app);
 
-export { db, rtdb, auth }
+export { db, rtdb, auth, firebaseConfig }

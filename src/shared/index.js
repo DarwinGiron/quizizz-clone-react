@@ -4,3 +4,4 @@ export * from './contexts/SidebarContext';
 export * from './contexts/AuthContext';
 export * from './contexts/ToastContext';
 export * from './contexts/ConfirmContext';
+export * from './utils/secondaryAuth';

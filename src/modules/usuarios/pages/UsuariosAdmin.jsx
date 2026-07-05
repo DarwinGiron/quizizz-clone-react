@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../../../firebase/config";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { Users, UserCog, Search, UserPlus, Shield } from "lucide-react";
-import { UsuarioCard } from '../../usuarios';
+import { Users, Search, UserPlus } from "lucide-react";
+import { UsuarioListItem } from '../../usuarios';
 import NuevoSupervisorModal from "../components/NuevoSupervisorModal";
+import EditarUsuarioModal from "../components/EditarUsuarioModal";
 
 export default function UsuariosAdmin() {
   const [usuarios, setUsuarios] = useState([]);
   const [cuadrillas, setCuadrillas] = useState({});
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [editando, setEditando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [filtroRol, setFiltroRol] = useState("todos");
@@ -65,15 +67,6 @@ export default function UsuariosAdmin() {
     });
   }, [usuarios, busqueda, filtroRol]);
 
-  const stats = useMemo(
-    () => ({
-      total: usuarios.length,
-      supervisores: usuarios.filter((u) => u.rol === "supervisor").length,
-      otros: usuarios.filter((u) => u.rol !== "supervisor").length,
-    }),
-    [usuarios]
-  );
-
   if (loading) {
     return (
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
@@ -104,35 +97,6 @@ export default function UsuariosAdmin() {
           <UserPlus className="w-5 h-5" />
           Nuevo Usuario
         </button>
-      </div>
-
-      {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
-        {[
-          { label: "Total usuarios", valor: stats.total, Icon: Users, color: "indigo" },
-          { label: "Supervisores", valor: stats.supervisores, Icon: Shield, color: "blue" },
-          { label: "Otros usuarios", valor: stats.otros, Icon: UserCog, color: "green" },
-        ].map(({ label, valor, Icon, color }) => {
-          const colores = {
-            indigo: "bg-indigo-100 text-indigo-600",
-            blue: "bg-blue-100 text-blue-600",
-            green: "bg-green-100 text-green-600",
-          };
-          return (
-            <div
-              key={label}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between"
-            >
-              <div>
-                <p className="text-sm font-medium text-gray-600">{label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{valor}</p>
-              </div>
-              <div className={`p-3 rounded-lg ${colores[color]}`}>
-                <Icon className="w-6 h-6" />
-              </div>
-            </div>
-          );
-        })}
       </div>
 
       {/* Filtros */}
@@ -177,21 +141,36 @@ export default function UsuariosAdmin() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {usuariosFiltrados.map((user) => (
-            <UsuarioCard
-              key={user.id}
-              usuario={user}
-              cuadrilla={cuadrillas[user.id] || []}
-            />
-          ))}
-        </div>
+        <>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {usuariosFiltrados.map((user) => (
+              <UsuarioListItem
+                key={user.id}
+                usuario={user}
+                cuadrilla={cuadrillas[user.id] || []}
+                onActualizado={cargarDatos}
+                onEditar={setEditando}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-500 text-center mt-4">
+            Mostrando {usuariosFiltrados.length} de {usuarios.length} usuarios
+          </p>
+        </>
       )}
 
       {mostrarModal && (
         <NuevoSupervisorModal
           onClose={() => setMostrarModal(false)}
           onUsuarioCreado={cargarDatos}
+        />
+      )}
+
+      {editando && (
+        <EditarUsuarioModal
+          usuario={editando}
+          onClose={() => setEditando(null)}
+          onActualizado={cargarDatos}
         />
       )}
     </div>

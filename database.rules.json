@@ -1,0 +1,39 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "liveSessions": {
+      "$sessionId": {
+        ".read": true,
+
+        "participants": {
+          ".write": true,
+          "$participantId": {
+            ".validate": "newData.hasChildren(['name'])"
+          }
+        },
+        "answers": {
+          ".write": true
+        },
+        "feedback": {
+          ".write": true
+        },
+        "countdown": {
+          ".write": true
+        },
+
+        "$other": {
+          ".write": "auth != null"
+        }
+      }
+    },
+
+    "avatars": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}

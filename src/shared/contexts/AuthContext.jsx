@@ -5,7 +5,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import {
   collection,
   query,
@@ -16,11 +16,29 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
 
-// Correos que se consideran administradores del sistema.
-const ADMIN_EMAILS = ['admin@admin.com', 'darwingirn@gmail.com'];
+// Dominio sintético usado para dar a cada supervisor una cuenta real de
+// Firebase Auth sin necesidad de un correo verdadero (ver src/shared/utils/secondaryAuth.js).
+export const SUPERVISOR_EMAIL_DOMAIN = 'supervisores.app';
 
-// Clave para persistir la sesión custom de supervisor (no es Firebase Auth).
-const SUPERVISOR_STORAGE_KEY = 'supervisor_session';
+// Los valores legacy del campo `usuario` son texto libre (nombres con
+// espacios/acentos, ej. "Darwin Girón"), no identificadores listos para email.
+// Se normaliza a un local-part válido: sin acentos, sin espacios, solo
+// caracteres permitidos en un email.
+export const usuarioToEmail = (usuario) => {
+  const limpio = (usuario || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // quita acentos/diacriticos (marcas combinantes tras normalize NFD)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '.') // cualquier caracter no válido -> punto
+    .replace(/\.{2,}/g, '.') // colapsa puntos repetidos
+    .replace(/^\.+|\.+$/g, ''); // quita puntos al inicio/fin
+  return `${limpio}@${SUPERVISOR_EMAIL_DOMAIN}`;
+};
+
+// Fallback temporal: la fuente de verdad del rol es usuarios/{uid}.rol.
+// Se conserva por si algún documento de administrador aún no tiene el campo `rol` migrado.
+const ADMIN_EMAILS = ['admin@admin.com', 'darwingirn@gmail.com'];
 
 const AuthContext = createContext(null);
 
@@ -35,24 +53,31 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [firebaseProfile, setFirebaseProfile] = useState(null);
-  const [supervisorSession, setSupervisorSession] = useState(() => {
-    try {
-      const raw = localStorage.getItem(SUPERVISOR_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Sincroniza con Firebase Auth (admin / usuarios autoregistrados).
+  // Única fuente de sesión: Firebase Auth. Los supervisores también son
+  // cuentas Auth reales (con email sintético), así que ya no hace falta
+  // una sesión custom en localStorage.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setFirebaseUser(u);
       if (u) {
         try {
-          const snap = await getDoc(doc(db, 'usuarios', u.uid));
-          setFirebaseProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+          // El doc del perfil puede vivir en usuarios/{uid} (admin / autoregistrado)
+          // o en un doc con otro id que referencia authUid (supervisores migrados).
+          let perfil = null;
+          const snapByUid = await getDoc(doc(db, 'usuarios', u.uid));
+          if (snapByUid.exists()) {
+            perfil = { id: snapByUid.id, ...snapByUid.data() };
+          } else {
+            const q = query(collection(db, 'usuarios'), where('authUid', '==', u.uid));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const d = snap.docs[0];
+              perfil = { id: d.id, ...d.data() };
+            }
+          }
+          setFirebaseProfile(perfil);
         } catch {
           setFirebaseProfile(null);
         }
@@ -64,82 +89,51 @@ export const AuthProvider = ({ children }) => {
     return () => unsub();
   }, []);
 
-  // Login custom de supervisor: valida contra la colección `usuarios`.
+  // Login de supervisor: ahora es una cuenta real de Firebase Auth con
+  // email sintético (usuario@supervisores.app). Cero comparación de
+  // contraseñas en el cliente — Firebase valida en su servidor.
   const loginSupervisor = useCallback(async (usuario, contrasena) => {
     const limpio = (usuario || '').trim();
     if (!limpio || !contrasena) {
       return { ok: false, error: 'Ingresa usuario y contraseña.' };
     }
 
-    const q = query(collection(db, 'usuarios'), where('usuario', '==', limpio));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      return { ok: false, error: 'Usuario o contraseña incorrectos.' };
+    try {
+      await signInWithEmailAndPassword(auth, usuarioToEmail(limpio), contrasena);
+      return { ok: true };
+    } catch (err) {
+      if (
+        err.code === 'auth/invalid-credential' ||
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-email'
+      ) {
+        return { ok: false, error: 'Usuario o contraseña incorrectos.' };
+      }
+      return { ok: false, error: 'No se pudo iniciar sesión. Intenta de nuevo.' };
     }
-
-    // La contraseña se compara en cliente (soporta el campo con o sin ñ).
-    const docu = snap.docs.find((d) => {
-      const data = d.data();
-      const pass = data['contraseña'] ?? data.contrasena ?? data.password;
-      return pass === contrasena;
-    });
-
-    if (!docu) {
-      return { ok: false, error: 'Usuario o contraseña incorrectos.' };
-    }
-
-    const data = docu.data();
-    if (data.rol !== 'supervisor') {
-      return { ok: false, error: 'Esta cuenta no tiene acceso de supervisor.' };
-    }
-
-    const session = {
-      source: 'custom',
-      id: docu.id,
-      supervisorId: docu.id,
-      nombre: data.nombre || data.usuario,
-      usuario: data.usuario,
-      codigo: data.codigo || null,
-      rol: 'supervisor',
-    };
-
-    localStorage.setItem(SUPERVISOR_STORAGE_KEY, JSON.stringify(session));
-    setSupervisorSession(session);
-    return { ok: true, session };
   }, []);
 
   const logout = useCallback(async () => {
-    localStorage.removeItem(SUPERVISOR_STORAGE_KEY);
-    setSupervisorSession(null);
-    if (auth.currentUser) {
-      try {
-        await signOut(auth);
-      } catch {
-        /* noop */
-      }
-    }
+    await signOut(auth);
   }, []);
 
-  // Identidad unificada. La sesión custom de supervisor tiene prioridad.
+  // Identidad unificada, derivada solo de Firebase Auth + el perfil de Firestore.
   let user = null;
-  if (supervisorSession) {
-    user = supervisorSession;
-  } else if (firebaseUser) {
+  if (firebaseUser) {
     const email = firebaseUser.email || '';
-    const isAdmin = ADMIN_EMAILS.includes(email);
-    const rol = isAdmin ? 'admin' : firebaseProfile?.rol || 'usuario';
+    const isAdminByEmail = ADMIN_EMAILS.includes(email);
+    const rol = firebaseProfile?.rol || (isAdminByEmail ? 'admin' : 'usuario');
     user = {
-      source: 'firebase',
-      id: firebaseUser.uid,
       uid: firebaseUser.uid,
       supervisorId: firebaseProfile?.id || firebaseUser.uid,
       nombre:
-        firebaseProfile?.userName ||
         firebaseProfile?.nombre ||
+        firebaseProfile?.userName ||
         firebaseUser.displayName ||
         email,
       email,
-      usuario: email,
+      usuario: firebaseProfile?.usuario || email,
       codigo: firebaseProfile?.codigo || null,
       rol,
     };
@@ -151,8 +145,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin: user?.rol === 'admin',
     isSupervisor: user?.rol === 'supervisor',
     supervisorId: user?.supervisorId || null,
-    // Si ya hay sesión de supervisor en localStorage, no esperamos a Firebase.
-    loading: authLoading && !supervisorSession,
+    loading: authLoading,
     loginSupervisor,
     logout,
   };

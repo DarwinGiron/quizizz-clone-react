@@ -1,0 +1,83 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para "Capacitaciones".
+// Cómo publicarlas: ver SEGURIDAD.md en la raíz del proyecto.
+//
+// IMPORTANTE: antes de publicar estas reglas, verifica que el documento
+// usuarios/{tu-uid-de-admin} tenga el campo `rol: "admin"`. Si no lo tiene,
+// quedarás bloqueado de tu propia base de datos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // El rol de admin se decide leyendo el documento de perfil del usuario
+    // autenticado (usuarios/{uid}), NUNCA por una lista de emails en el cliente.
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    // Prohíbe para siempre que el documento de un usuario contenga una
+    // contraseña en texto plano. Las contraseñas viven únicamente en
+    // Firebase Auth (hasheadas), nunca en Firestore.
+    function sinCamposDeContrasena() {
+      return !request.resource.data.keys().hasAny(['contraseña', 'contrasena', 'password']);
+    }
+
+    match /usuarios/{userId} {
+      allow read: if isSignedIn();
+      // Autoregistro (Register.jsx): un usuario nuevo crea su propio doc con su uid.
+      allow create: if (isSignedIn() && request.auth.uid == userId && sinCamposDeContrasena())
+        || (isAdmin() && sinCamposDeContrasena());
+      allow update: if isAdmin() && sinCamposDeContrasena();
+      allow delete: if isAdmin();
+    }
+
+    match /cuadrilla/{docId} {
+      allow read: if isSignedIn();
+      // Nota: en esta versión cualquier usuario autenticado (admin o supervisor)
+      // puede escribir cuadrillas. Restringir a "solo su propia cuadrilla"
+      // requeriría resolver supervisor_id -> uid con una Cloud Function.
+      allow write: if isSignedIn();
+    }
+
+    match /capacitaciones/{capId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /capacitacion_bloques/{bloqueId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /sessionStats/{sessionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Colección legacy detectada en el código (src/modules/estadisticas/components/SessionStats.jsx).
+    // Revisar si sigue en uso; se deja con las mismas reglas que sessionStats por seguridad.
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Cualquier otra colección no listada queda bloqueada por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

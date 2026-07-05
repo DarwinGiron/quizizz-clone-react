@@ -7,7 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../firebase/config';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BackButton, useToast, useConfirm } from '../../../shared';
+import { BackButton, useToast, useConfirm, useAuth } from '../../../shared';
 import { Users, UserCircle, Calendar, GripVertical, Lightbulb, SlidersHorizontal, Zap } from 'lucide-react';
 import ConfigCuotasModal from '../components/ConfigCuotasModal';
 import ConvocatoriaModal from '../components/ConvocatoriaModal';
@@ -16,6 +16,7 @@ export default function AsignacionIntuitiva() {
   const { capacitacionId } = useParams();
   const toast = useToast();
   const confirm = useConfirm();
+  const { isAdmin: esAdminCtx, isSupervisor: esSupervisorCtx } = useAuth();
   const [capacitacion, setCapacitacion] = useState(null);
   const [bloques, setBloques] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -68,20 +69,21 @@ export default function AsignacionIntuitiva() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Usuario autenticado con Firebase Auth
-        setUsuarioActual({ 
-          uid: user.uid, 
+        // Usuario autenticado con Firebase Auth. El rol viene del
+        // AuthContext (usuarios/{uid}.rol), no de una lista de emails.
+        setUsuarioActual({
+          uid: user.uid,
           email: user.email,
-          tipo: 'auth', // Marcamos que es usuario autenticado
-          rol: user.email === 'admin@admin.com' || user.email === 'darwingirn@gmail.com' ? 'admin' : 'supervisor'
+          tipo: 'auth',
+          rol: esAdminCtx ? 'admin' : (esSupervisorCtx ? 'supervisor' : 'usuario'),
         });
-        setEsAdmin(user.email === 'admin@admin.com' || user.email === 'darwingirn@gmail.com');
+        setEsAdmin(esAdminCtx);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [esAdminCtx, esSupervisorCtx]);
 
   useEffect(() => {
     if (!usuarioActual) return;
