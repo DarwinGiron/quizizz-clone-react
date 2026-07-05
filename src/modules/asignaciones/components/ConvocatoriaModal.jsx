@@ -20,6 +20,7 @@ import {
   turnoDeSupervisorEnFecha,
   labelTurno,
 } from '../utils/turnos';
+import useTurnosConfig from '../hooks/useTurnosConfig';
 
 // Parser de fecha local 'yyyy-MM-dd'.
 const createLocalDate = (s) => {
@@ -50,6 +51,7 @@ export default function ConvocatoriaModal({
   const [cuadrillas, setCuadrillas] = useState({});
   const [aplicando, setAplicando] = useState(false);
   const toast = useToast();
+  const { turnos: turnosConfig } = useTurnosConfig();
 
   const config = useMemo(
     () => normalizarConfig(capacitacion?.asignacion_config),
@@ -109,7 +111,7 @@ export default function ConvocatoriaModal({
       if (cupoRestante <= 0) return;
 
       const fechaBloque = createLocalDate(bloque.fecha);
-      const reqShift = turnoDeBloque(bloque);
+      const reqShift = turnoDeBloque(turnosConfig, bloque);
 
       // Personas elegibles: cuadrillas cuyo supervisor está en el turno requerido.
       const elegibles = [];
@@ -140,6 +142,7 @@ export default function ConvocatoriaModal({
           if (faltan > 0) {
             avisos.push(
               `${bloque.fecha} ${bloque.hora_inicio}: faltan ${faltan} de "${c.clave}" (sin personal disponible del turno ${labelTurno(
+                turnosConfig,
                 reqShift
               )}).`
             );
@@ -163,7 +166,7 @@ export default function ConvocatoriaModal({
       0
     );
     return { plan: planLocal, advertencias: avisos, totalAsignar: total };
-  }, [loading, bloques, supervisores, cuadrillas, config]);
+  }, [loading, bloques, supervisores, cuadrillas, config, turnosConfig]);
 
   const bloquesConPlan = useMemo(
     () =>
@@ -286,7 +289,7 @@ export default function ConvocatoriaModal({
                           {bloque.fecha} · {bloque.hora_inicio}-{bloque.hora_fin}
                         </span>
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                          Turno {labelTurno(turnoDeBloque(bloque))} · +
+                          Turno {labelTurno(turnosConfig, turnoDeBloque(turnosConfig, bloque))} · +
                           {plan[bloque.id].length}
                         </span>
                       </div>

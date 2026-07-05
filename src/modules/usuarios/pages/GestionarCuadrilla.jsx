@@ -16,11 +16,13 @@ import { Trash2, Pencil } from "lucide-react";
 import ImportarCuadrillaModal from "../components/ImportarCuadrillaModal";
 import EditarUsuarioModal from "../components/EditarUsuarioModal";
 import { BackButton, useToast, useConfirm } from "../../../shared";
+import { useTurnosConfig } from "../../asignaciones";
 
 export default function GestionarCuadrilla() {
   const { supervisorId } = useParams();
   const toast = useToast();
   const confirm = useConfirm();
+  const { turnos: turnosConfig } = useTurnosConfig();
   const [supervisor, setSupervisor] = useState(null);
   const [cuadrilla, setCuadrilla] = useState([]);
   const [mostrarImportarModal, setMostrarImportarModal] = useState(false);
@@ -87,7 +89,11 @@ export default function GestionarCuadrilla() {
             </h1>
             <p className="text-sm text-gray-500">
               Usuario: {supervisor.usuario} | Código: {supervisor.codigo} | Turno:{" "}
-              {supervisor.turno || "sin definir"}
+              {(() => {
+                const t = turnosConfig[supervisor.turno || "dia"];
+                const modo = supervisor.turno_modo === "fijo" ? "fijo" : "rotativo";
+                return t ? `${t.nombre} (${t.inicio}-${t.fin}) · ${modo}` : "sin definir";
+              })()}
             </p>
           </div>
           <button

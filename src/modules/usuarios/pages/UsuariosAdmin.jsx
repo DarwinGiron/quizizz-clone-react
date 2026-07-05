@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../../../firebase/config";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { Users, Search, UserPlus } from "lucide-react";
+import { Users, Search, UserPlus, Clock } from "lucide-react";
 import { UsuarioListItem } from '../../usuarios';
+import { ConfigurarTurnosModal } from '../../asignaciones';
 import NuevoSupervisorModal from "../components/NuevoSupervisorModal";
 import EditarUsuarioModal from "../components/EditarUsuarioModal";
 
@@ -10,6 +11,7 @@ export default function UsuariosAdmin() {
   const [usuarios, setUsuarios] = useState([]);
   const [cuadrillas, setCuadrillas] = useState({});
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarTurnos, setMostrarTurnos] = useState(false);
   const [editando, setEditando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -90,13 +92,22 @@ export default function UsuariosAdmin() {
             Administra usuarios, supervisores y sus cuadrillas.
           </p>
         </div>
-        <button
-          onClick={() => setMostrarModal(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-lg hover:shadow-lg transition-shadow font-medium"
-        >
-          <UserPlus className="w-5 h-5" />
-          Nuevo Usuario
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setMostrarTurnos(true)}
+            className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          >
+            <Clock className="w-5 h-5" />
+            Configurar turnos
+          </button>
+          <button
+            onClick={() => setMostrarModal(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-lg hover:shadow-lg transition-shadow font-medium"
+          >
+            <UserPlus className="w-5 h-5" />
+            Nuevo Usuario
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -172,6 +183,10 @@ export default function UsuariosAdmin() {
           onClose={() => setEditando(null)}
           onActualizado={cargarDatos}
         />
+      )}
+
+      {mostrarTurnos && (
+        <ConfigurarTurnosModal onClose={() => setMostrarTurnos(false)} />
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { doc, updateDoc, deleteField } from 'firebase/firestore';
 import { ShieldAlert, ShieldCheck, KeyRound, ChevronRight } from 'lucide-react';
 import { db } from '../../../firebase/config';
 import { useToast, usuarioToEmail, crearCuentaAuth } from '../../../shared';
+import { useTurnosConfig } from '../../asignaciones';
 
 // Modal para migrar un supervisor legacy (contraseña en texto plano en
 // Firestore) a una cuenta real de Firebase Auth. Ver SEGURIDAD.md.
@@ -97,6 +98,7 @@ const ActivarAccesoModal = ({ usuario, onClose, onActivado }) => {
 // - Si no -> abre directamente el modal de edición (no tiene cuadrilla).
 const UsuarioListItem = ({ usuario, cuadrilla, onActualizado, onEditar }) => {
   const navigate = useNavigate();
+  const { turnos: turnosConfig } = useTurnosConfig();
   const [mostrarActivar, setMostrarActivar] = useState(false);
 
   const nombre = usuario?.nombre || usuario?.usuario || usuario?.email || 'Usuario';
@@ -139,6 +141,13 @@ const UsuarioListItem = ({ usuario, cuadrilla, onActualizado, onEditar }) => {
           {isSupervisor && (
             <span className="hidden md:inline text-xs text-gray-400">
               {cuadrilla?.length || 0} en cuadrilla
+            </span>
+          )}
+
+          {isSupervisor && usuario?.turno && (
+            <span className="hidden lg:inline text-xs text-gray-400">
+              {turnosConfig[usuario.turno]?.nombre || usuario.turno}
+              {usuario.turno_modo === 'fijo' ? ' · fijo' : ''}
             </span>
           )}
 

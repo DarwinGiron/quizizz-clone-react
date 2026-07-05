@@ -1,27 +1,32 @@
 // Modelo de turnos rotativos para la convocatoria automática.
 //
-// Hay 3 turnos que rotan SEMANALMENTE en el ciclo: día → noche → tarde → día.
-// El turno se define a nivel de supervisor/cuadrilla (todo su personal lo comparte).
+// Hay 3 posiciones estructurales que rotan SEMANALMENTE en un orden fijo:
+// dia → noche → tarde → dia → ... Ese orden nunca cambia. Lo que SÍ es
+// editable por el admin (ver ConfigurarTurnosModal) es el nombre para
+// mostrar y el horario (inicio/fin) de cada una de esas 3 posiciones.
+// La configuración vigente se guarda en Firestore: config/turnos.
+//
 // Cada supervisor guarda en `usuarios`:
-//   - turno:        'dia' | 'tarde' | 'noche'  (su turno en la semana de referencia)
+//   - turno:        'dia' | 'tarde' | 'noche'  (su posición en la semana de referencia)
 //   - turno_semana: 'yyyy-MM-dd'               (lunes de esa semana de referencia)
-// A partir de ahí se calcula el turno en cualquier otra semana rotando el ciclo.
+//   - turno_modo:   'rotativo' | 'fijo'         (si es 'fijo', nunca rota)
 
 import { differenceInCalendarWeeks } from 'date-fns';
 
-// Rangos horarios por defecto (editables aquí si la operación cambia).
-export const TURNOS = {
-  dia: { id: 'dia', label: 'Día', inicio: '06:00', fin: '14:00' },
-  tarde: { id: 'tarde', label: 'Tarde', inicio: '14:00', fin: '22:00' },
-  noche: { id: 'noche', label: 'Noche', inicio: '22:00', fin: '06:00' },
-};
-
 export const TURNO_IDS = ['dia', 'tarde', 'noche'];
 
-// Orden de rotación semanal: día → noche → tarde → (día).
+// Orden de rotación semanal, fijo por diseño: día → noche → tarde → (día).
 const ORDEN_ROTACION = ['dia', 'noche', 'tarde'];
 
-export const labelTurno = (id) => TURNOS[id]?.label || id;
+// Valores por defecto si el admin todavía no configuró nada en Firestore.
+export const DEFAULT_TURNOS_CONFIG = {
+  dia: { nombre: 'Día', inicio: '06:00', fin: '14:00' },
+  tarde: { nombre: 'Tarde', inicio: '14:00', fin: '22:00' },
+  noche: { nombre: 'Noche', inicio: '22:00', fin: '06:00' },
+};
+
+export const labelTurno = (config, id) =>
+  config?.[id]?.nombre || DEFAULT_TURNOS_CONFIG[id]?.nombre || id;
 
 // Parser de fecha local 'yyyy-MM-dd' sin desfase de zona horaria.
 const createLocalDate = (dateString) => {
@@ -38,9 +43,11 @@ export const turnoTrasSemanas = (turnoBase, n) => {
   return ORDEN_ROTACION[m];
 };
 
-// Turno del supervisor en una fecha dada, considerando la rotación semanal.
+// Turno del supervisor en una fecha dada. Si su modo es 'fijo', se queda
+// siempre en el mismo turno sin importar la semana.
 export const turnoDeSupervisorEnFecha = (supervisor, fecha) => {
   const base = supervisor?.turno || 'dia';
+  if (supervisor?.turno_modo === 'fijo') return base;
   if (!fecha) return base;
   const semanaRef = supervisor?.turno_semana
     ? createLocalDate(supervisor.turno_semana)
@@ -49,10 +56,21 @@ export const turnoDeSupervisorEnFecha = (supervisor, fecha) => {
   return turnoTrasSemanas(base, n);
 };
 
-// Turno requerido por un bloque según su hora de inicio ('HH:mm').
-export const turnoDeBloque = (bloque) => {
+// ¿La hora 'HH:mm' cae dentro de [inicio, fin)? Soporta rangos que cruzan
+// medianoche (ej. 22:00 a 06:00).
+const horaEnRango = (hora, inicio, fin) => {
+  if (inicio <= fin) return hora >= inicio && hora < fin;
+  return hora >= inicio || hora < fin; // cruza medianoche
+};
+
+// Turno requerido por un bloque según su hora de inicio ('HH:mm'), usando
+// los horarios configurados (o los de por defecto si no hay config).
+export const turnoDeBloque = (config, bloque) => {
   const t = bloque?.hora_inicio || '';
-  if (t >= '06:00' && t < '14:00') return 'dia';
-  if (t >= '14:00' && t < '22:00') return 'tarde';
-  return 'noche';
+  const cfg = config || DEFAULT_TURNOS_CONFIG;
+  for (const id of TURNO_IDS) {
+    const { inicio, fin } = cfg[id] || DEFAULT_TURNOS_CONFIG[id];
+    if (horaEnRango(t, inicio, fin)) return id;
+  }
+  return 'dia';
 };

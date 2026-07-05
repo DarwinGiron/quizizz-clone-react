@@ -3,12 +3,13 @@ import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase/config";
 import { useNavigate } from "react-router-dom";
 import { startOfWeek, format } from "date-fns";
-import { TURNO_IDS, labelTurno } from "../../asignaciones/utils/turnos";
+import { TURNO_IDS, useTurnosConfig } from "../../asignaciones";
 import { useToast, usuarioToEmail, crearCuentaAuth } from "../../../shared";
 
 export default function NuevoSupervisorModal({ onClose }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const { turnos: turnosConfig } = useTurnosConfig();
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
@@ -17,6 +18,7 @@ export default function NuevoSupervisorModal({ onClose }) {
     codigo: "",
     rol: "supervisor",
     turno: "dia",
+    turno_modo: "rotativo",
   });
 
   const handleSubmit = async () => {
@@ -103,21 +105,35 @@ export default function NuevoSupervisorModal({ onClose }) {
             onChange={(e) => setForm({ ...form, contraseña: e.target.value })}
             className="border p-2 rounded w-full"
           />
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Turno (semana actual)
-            </label>
-            <select
-              value={form.turno}
-              onChange={(e) => setForm({ ...form, turno: e.target.value })}
-              className="border p-2 rounded w-full bg-white"
-            >
-              {TURNO_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {labelTurno(id)}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Turno</label>
+              <select
+                value={form.turno}
+                onChange={(e) => setForm({ ...form, turno: e.target.value })}
+                className="border p-2 rounded w-full bg-white"
+              >
+                {TURNO_IDS.map((id) => {
+                  const t = turnosConfig[id];
+                  return (
+                    <option key={id} value={id}>
+                      {t?.nombre || id} ({t?.inicio}-{t?.fin})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Modo</label>
+              <select
+                value={form.turno_modo}
+                onChange={(e) => setForm({ ...form, turno_modo: e.target.value })}
+                className="border p-2 rounded w-full bg-white"
+              >
+                <option value="rotativo">Rotativo</option>
+                <option value="fijo">Fijo</option>
+              </select>
+            </div>
           </div>
         </div>
 

@@ -9,3 +9,10 @@ export { default as AsignacionSupervisor } from './pages/AsignacionSupervisor';
 export { default as AsignarParticipantesModal } from './components/AsignarParticipantesModal';
 export { default as ConfigCuotasModal } from './components/ConfigCuotasModal';
 export { default as ConvocatoriaModal } from './components/ConvocatoriaModal';
+export { default as ConfigurarTurnosModal } from './components/ConfigurarTurnosModal';
+
+// Hooks
+export { default as useTurnosConfig } from './hooks/useTurnosConfig';
+
+// Utils
+export * from './utils/turnos';

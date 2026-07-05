@@ -4,11 +4,18 @@ import { startOfWeek, format } from "date-fns";
 import { Pencil, ShieldCheck, KeyRound } from "lucide-react";
 import { db } from "../../../firebase/config";
 import { useToast, usuarioToEmail, crearCuentaAuth } from "../../../shared";
-import { TURNO_IDS, labelTurno } from "../../asignaciones/utils/turnos";
+import { TURNO_IDS, useTurnosConfig } from "../../asignaciones";
 
 export default function EditarUsuarioModal({ usuario, onClose, onActualizado }) {
   const toast = useToast();
-  const [form, setForm] = useState({ nombre: "", codigo: "", usuario: "", turno: "dia" });
+  const { turnos: turnosConfig } = useTurnosConfig();
+  const [form, setForm] = useState({
+    nombre: "",
+    codigo: "",
+    usuario: "",
+    turno: "dia",
+    turno_modo: "rotativo",
+  });
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -22,6 +29,7 @@ export default function EditarUsuarioModal({ usuario, onClose, onActualizado }) 
         codigo: usuario.codigo || "",
         usuario: usuario.usuario || "",
         turno: usuario.turno || "dia",
+        turno_modo: usuario.turno_modo || "rotativo",
       });
     }
   }, [usuario]);
@@ -52,6 +60,10 @@ export default function EditarUsuarioModal({ usuario, onClose, onActualizado }) 
       };
       if (esSupervisor) {
         payload.turno = form.turno;
+        payload.turno_modo = form.turno_modo;
+        // La semana de referencia solo importa para el modo rotativo;
+        // se actualiza igual para que, si cambia a rotativo más tarde,
+        // arranque la rotación desde la semana en que se guardó.
         payload.turno_semana = format(
           startOfWeek(new Date(), { weekStartsOn: 1 }),
           "yyyy-MM-dd"
@@ -132,19 +144,35 @@ export default function EditarUsuarioModal({ usuario, onClose, onActualizado }) 
             )}
           </div>
           {esSupervisor && (
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Turno (semana actual)</label>
-              <select
-                value={form.turno}
-                onChange={(e) => setForm({ ...form, turno: e.target.value })}
-                className="w-full border border-gray-300 p-2.5 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
-              >
-                {TURNO_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {labelTurno(id)}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Turno</label>
+                <select
+                  value={form.turno}
+                  onChange={(e) => setForm({ ...form, turno: e.target.value })}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                >
+                  {TURNO_IDS.map((id) => {
+                    const t = turnosConfig[id];
+                    return (
+                      <option key={id} value={id}>
+                        {t?.nombre || id} ({t?.inicio}-{t?.fin})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Modo</label>
+                <select
+                  value={form.turno_modo}
+                  onChange={(e) => setForm({ ...form, turno_modo: e.target.value })}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                >
+                  <option value="rotativo">Rotativo (cambia cada semana)</option>
+                  <option value="fijo">Fijo (siempre el mismo)</option>
+                </select>
+              </div>
             </div>
           )}
 

@@ -75,6 +75,13 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Configuración global de la app (ej. config/turnos: nombre y horario
+    // de los 3 turnos rotativos). Solo el admin puede modificarla.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Cualquier otra colección no listada queda bloqueada por defecto.
     match /{document=**} {
       allow read, write: if false;
