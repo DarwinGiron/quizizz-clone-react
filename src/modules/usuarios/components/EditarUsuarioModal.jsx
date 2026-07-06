@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { doc, updateDoc, deleteField } from "firebase/firestore";
+import { doc, updateDoc, deleteField, setDoc } from "firebase/firestore";
 import { startOfWeek, format } from "date-fns";
 import { Pencil, ShieldCheck, KeyRound } from "lucide-react";
 import { db } from "../../../firebase/config";
@@ -51,6 +51,8 @@ export default function EditarUsuarioModal({ usuario, onClose, onActualizado }) 
       // se activa el acceso seguro en el mismo paso.
       if (!tieneAccesoSeguro && nuevaPassword) {
         authUid = await crearCuentaAuth(usuarioToEmail(form.usuario), nuevaPassword);
+        // Colección espejo que las reglas de Firestore pueden leer por uid.
+        await setDoc(doc(db, "roles", authUid), { rol: usuario.rol || "supervisor" });
       }
 
       const payload = {

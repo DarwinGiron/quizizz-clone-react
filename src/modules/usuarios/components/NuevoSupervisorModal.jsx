@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase/config";
 import { useNavigate } from "react-router-dom";
 import { startOfWeek, format } from "date-fns";
@@ -21,8 +21,10 @@ export default function NuevoSupervisorModal({ onClose }) {
     turno_modo: "rotativo",
   });
 
+  const esSupervisor = form.rol === "supervisor";
+
   const handleSubmit = async () => {
-    const { nombre, usuario, contraseña, codigo, ...resto } = form;
+    const { nombre, usuario, contraseña, codigo, rol } = form;
     if (!nombre || !usuario || !contraseña || !codigo) {
       toast.error("Completa todos los campos");
       return;
@@ -45,19 +47,22 @@ export default function NuevoSupervisorModal({ onClose }) {
       // Se crea con una instancia secundaria para no cerrar la sesión del admin.
       const authUid = await crearCuentaAuth(usuarioToEmail(usuario), contraseña);
 
-      const turno_semana = format(
-        startOfWeek(new Date(), { weekStartsOn: 1 }),
-        "yyyy-MM-dd"
-      );
+      const datos = { nombre, usuario, codigo, rol, authUid };
+      if (esSupervisor) {
+        datos.turno = form.turno;
+        datos.turno_modo = form.turno_modo;
+        datos.turno_semana = format(
+          startOfWeek(new Date(), { weekStartsOn: 1 }),
+          "yyyy-MM-dd"
+        );
+      }
       // Sin campo de contraseña: la validación vive en Firebase Auth, no en Firestore.
-      await addDoc(collection(db, "usuarios"), {
-        nombre,
-        usuario,
-        codigo,
-        authUid,
-        ...resto,
-        turno_semana,
-      });
+      await addDoc(collection(db, "usuarios"), datos);
+
+      // Colección espejo que las reglas de Firestore SÍ pueden leer por uid
+      // (el doc de arriba tiene un id aleatorio; las reglas no pueden
+      // resolver "authUid == este uid" sin una query).
+      await setDoc(doc(db, "roles", authUid), { rol });
 
       navigate("/usuarios", { replace: true });
       window.location.reload();
@@ -67,8 +72,8 @@ export default function NuevoSupervisorModal({ onClose }) {
       } else if (error.code === "auth/weak-password") {
         toast.error("La contraseña es demasiado débil.");
       } else {
-        console.error("Error al crear supervisor:", error);
-        toast.error("No se pudo crear el supervisor. Intenta de nuevo.");
+        console.error("Error al crear miembro del equipo:", error);
+        toast.error("No se pudo crear la cuenta. Intenta de nuevo.");
       }
       setGuardando(false);
     }
@@ -77,9 +82,20 @@ export default function NuevoSupervisorModal({ onClose }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-bold mb-4 text-indigo-700">Nuevo Supervisor</h2>
+        <h2 className="text-xl font-bold mb-4 text-indigo-700">Nuevo miembro del equipo</h2>
 
         <div className="space-y-4 mb-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Rol</label>
+            <select
+              value={form.rol}
+              onChange={(e) => setForm({ ...form, rol: e.target.value })}
+              className="border p-2 rounded w-full bg-white"
+            >
+              <option value="supervisor">Supervisor</option>
+              <option value="capacitador">Capacitador</option>
+            </select>
+          </div>
           <input
             placeholder="Código personal"
             value={form.codigo}
@@ -105,36 +121,38 @@ export default function NuevoSupervisorModal({ onClose }) {
             onChange={(e) => setForm({ ...form, contraseña: e.target.value })}
             className="border p-2 rounded w-full"
           />
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Turno</label>
-              <select
-                value={form.turno}
-                onChange={(e) => setForm({ ...form, turno: e.target.value })}
-                className="border p-2 rounded w-full bg-white"
-              >
-                {TURNO_IDS.map((id) => {
-                  const t = turnosConfig[id];
-                  return (
-                    <option key={id} value={id}>
-                      {t?.nombre || id} ({t?.inicio}-{t?.fin})
-                    </option>
-                  );
-                })}
-              </select>
+          {esSupervisor && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Turno</label>
+                <select
+                  value={form.turno}
+                  onChange={(e) => setForm({ ...form, turno: e.target.value })}
+                  className="border p-2 rounded w-full bg-white"
+                >
+                  {TURNO_IDS.map((id) => {
+                    const t = turnosConfig[id];
+                    return (
+                      <option key={id} value={id}>
+                        {t?.nombre || id} ({t?.inicio}-{t?.fin})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Modo</label>
+                <select
+                  value={form.turno_modo}
+                  onChange={(e) => setForm({ ...form, turno_modo: e.target.value })}
+                  className="border p-2 rounded w-full bg-white"
+                >
+                  <option value="rotativo">Rotativo</option>
+                  <option value="fijo">Fijo</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Modo</label>
-              <select
-                value={form.turno_modo}
-                onChange={(e) => setForm({ ...form, turno_modo: e.target.value })}
-                className="border p-2 rounded w-full bg-white"
-              >
-                <option value="rotativo">Rotativo</option>
-                <option value="fijo">Fijo</option>
-              </select>
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="flex justify-end space-x-2">
@@ -153,7 +171,7 @@ export default function NuevoSupervisorModal({ onClose }) {
             {guardando && (
               <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
             )}
-            {guardando ? "Creando..." : "Crear Supervisor"}
+            {guardando ? "Creando..." : "Crear cuenta"}
           </button>
         </div>
       </div>

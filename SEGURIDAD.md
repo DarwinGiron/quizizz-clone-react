@@ -6,9 +6,11 @@ los supervisores existentes al nuevo esquema de autenticación real.
 ## 0. Antes de publicar cualquier regla: verifica tu rol de admin
 
 Las reglas nuevas (`firestore.rules`) deciden quién es administrador leyendo
-el campo `rol` del documento `usuarios/{tu-uid}`. **Si tu propio documento no
-tiene `rol: "admin"`, quedarás bloqueado de tu propia base de datos en cuanto
-publiques las reglas.**
+**dos lugares posibles**: el documento `roles/{tu-uid}` (fuente principal,
+ver sección 6) y, como respaldo, el campo `rol` del documento
+`usuarios/{tu-uid}`. **Si ninguno de los dos existe con `rol: "admin"`,
+quedarás bloqueado de tu propia base de datos en cuanto publiques las
+reglas.**
 
 Pasos para verificar/corregir esto ANTES de publicar:
 
@@ -18,7 +20,9 @@ Pasos para verificar/corregir esto ANTES de publicar:
    documento cuyo ID sea ese UID.
    - Si no existe, créalo con al menos: `{ rol: "admin", nombre: "Tu nombre" }`.
    - Si existe, agrega/edita el campo `rol` a `"admin"` si no lo tiene.
-3. Recién entonces continúa con el paso 1 de abajo.
+3. Además, crea (si no existe) el documento `roles/{tu-uid}` con
+   `{ rol: "admin" }` — es el que las reglas nuevas leen primero.
+4. Recién entonces continúa con el paso 1 de abajo.
 
 ## 1. Publicar las reglas de Firestore
 
@@ -124,6 +128,42 @@ No es solo "restaurar la página". Haría falta, como mínimo:
    gente" de "cualquiera puede llamar a la API pública" — esa barrera
    siempre depende de las reglas de Firestore, no de ocultar el botón.
 
+## 6. Sistema de roles y permisos (colección `roles`)
+
+Hay 4 roles: `admin`, `capacitador`, `supervisor`, `usuario`. Cada ruta de
+la app y cada regla de Firestore valida el rol antes de dejar entrar o
+escribir. El modal "Nuevo miembro del equipo" (antes "Nuevo Supervisor")
+ahora deja elegir entre supervisor y capacitador.
+
+### Por qué existe una colección `roles` separada de `usuarios`
+
+Las reglas de seguridad de Firestore **no pueden hacer queries** (no hay
+forma de escribir "dame el documento cuyo campo `authUid` sea tal uid").
+El admin tiene su perfil en `usuarios/{uid}` (mismo id que su uid de Auth,
+por eso las reglas viejas funcionaban), pero los supervisores y
+capacitadores tienen su perfil en un documento con un **ID aleatorio**
+(el uid de Auth vive en el campo `authUid` dentro de ese doc). Sin una
+query, las reglas no pueden resolver esa relación.
+
+La solución: cada vez que se crea o migra una cuenta, la app también
+escribe un documento espejo `roles/{authUid} → { rol }`. Las reglas leen
+`roles/{request.auth.uid}` directamente (sin query) para decidir permisos.
+
+### Migrar cuentas que ya tenían acceso seguro ANTES de este cambio
+
+Si migraste supervisores con "Activar acceso seguro" (sección 3) **antes**
+de que existiera la colección `roles`, sus reglas de Firestore no van a
+reconocerlos como supervisores hasta que les crees el documento manualmente:
+
+1. Firebase Console → Firestore Database → colección `usuarios` → busca
+   el documento del supervisor → copia su campo `authUid`.
+2. Colección `roles` (créala si no existe) → nuevo documento → como ID
+   pega ese `authUid` → agrega el campo `rol` con el valor `"supervisor"`
+   (o `"capacitador"` si aplica).
+3. Repite para cada cuenta migrada antes de este cambio. Las cuentas
+   creadas o migradas DESPUÉS de este cambio ya no necesitan este paso —
+   la app lo hace sola.
+
 ## Resumen de qué cambió
 
 - Los supervisores ahora tienen cuentas reales de Firebase Auth (email
@@ -137,3 +177,9 @@ No es solo "restaurar la página". Haría falta, como mínimo:
   solo como respaldo temporal en `AuthContext.jsx`).
 - El registro es solo por invitación: no hay ruta pública de registro;
   toda cuenta se crea desde el panel de Usuarios por un admin.
+- Nace el rol `capacitador` (crea evaluaciones, lanza sesiones en vivo,
+  ve reportes) y cada ruta de la app + regla de Firestore valida el rol
+  del usuario (antes solo `/mis-asignaciones` estaba protegida).
+- Colección `roles/{authUid} → { rol }` como espejo legible por las
+  reglas de Firestore (ver sección 6) — necesaria porque las reglas no
+  pueden resolver "el doc de usuarios cuyo authUid coincide con mi uid".

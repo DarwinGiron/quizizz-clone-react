@@ -14,7 +14,7 @@ import { db, auth } from '../../../firebase/config';
 import { format, parseISO, isSameDay, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { onAuthStateChanged } from 'firebase/auth';
-import { BackButton, useToast, useConfirm } from '../../../shared';
+import { BackButton, useToast, useConfirm, useAuth } from '../../../shared';
 import {
   Calendar,
   Clock,
@@ -41,6 +41,7 @@ const CapacitacionDetail = () => {
   const [actualizando, setActualizando] = useState(null);
   const toast = useToast();
   const confirm = useConfirm();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -523,8 +524,8 @@ const CapacitacionDetail = () => {
                         {bloquesPorFecha[fecha].length} bloque{bloquesPorFecha[fecha].length !== 1 ? 's' : ''}
                       </div>
                       
-                      {/* Botones de acción masiva para usuarios autenticados */}
-                      {user && bloquesPorFecha[fecha].length > 1 && (
+                      {/* Botones de acción masiva (solo admin) */}
+                      {isAdmin && bloquesPorFecha[fecha].length > 1 && (
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => habilitarTodosLosBloques(fecha)}
@@ -618,8 +619,8 @@ const CapacitacionDetail = () => {
                                   </div>
                                 </div>
 
-                                {/* Botones de acción para usuarios autenticados */}
-                                {user && (
+                                {/* Botones de acción (solo admin) */}
+                                {isAdmin && (
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={(e) => {
@@ -709,35 +710,39 @@ const CapacitacionDetail = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay bloques programados</h3>
               <p className="text-gray-600 mb-4">Esta capacitación aún no tiene bloques de horarios definidos.</p>
-              <Link
-                to={`/asignaciones/intuitiva/${id}`}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition"
-              >
-                <UserPlus className="w-4 h-4" />
-                Crear Asignaciones
-              </Link>
+              {isAdmin && (
+                <Link
+                  to={`/asignaciones/intuitiva/${id}`}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Crear Asignaciones
+                </Link>
+              )}
             </div>
           )}
         </div>
 
-        {/* Acciones flotantes */}
-        <div className="fixed bottom-6 right-6 flex flex-col gap-3">
-          <Link
-            to={`/asignaciones/intuitiva/${id}`}
-            className="bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105"
-            title="Gestionar Asignaciones"
-          >
-            <UserPlus className="w-5 h-5" />
-          </Link>
+        {/* Acciones flotantes (solo admin) */}
+        {isAdmin && (
+          <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+            <Link
+              to={`/asignaciones/intuitiva/${id}`}
+              className="bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-105"
+              title="Gestionar Asignaciones"
+            >
+              <UserPlus className="w-5 h-5" />
+            </Link>
 
-          <Link
-            to={`/capacitaciones/${id}/edit`}
-            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
-            title="Editar Capacitación"
-          >
-            <Pencil className="w-5 h-5" />
-          </Link>
-        </div>
+            <Link
+              to={`/capacitaciones/${id}/edit`}
+              className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
+              title="Editar Capacitación"
+            >
+              <Pencil className="w-5 h-5" />
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

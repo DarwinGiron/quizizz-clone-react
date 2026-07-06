@@ -20,8 +20,10 @@ import {
   Gauge,
 } from 'lucide-react';
 import { GestionarHorariosModal } from '../components';
+import { useAuth } from '../../../shared';
 
 const CapacitacionesDashboard = () => {
+  const { isAdmin } = useAuth();
   const [capacitaciones, setCapacitaciones] = useState([]);
   const [bloques, setBloques] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState('todas');
@@ -197,12 +199,14 @@ const CapacitacionesDashboard = () => {
               <h1 className="text-4xl font-bold text-gray-900 mb-2">Capacitaciones</h1>
               <p className="text-gray-600">Gestiona y supervisa todas las capacitaciones del sistema</p>
             </div>
-            <Link to="/capacitaciones/nueva">
-              <button className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all shadow-sm font-medium">
-                <Plus className="w-5 h-5" />
-                Nueva Capacitación
-              </button>
-            </Link>
+            {isAdmin && (
+              <Link to="/capacitaciones/nueva">
+                <button className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all shadow-sm font-medium">
+                  <Plus className="w-5 h-5" />
+                  Nueva Capacitación
+                </button>
+              </Link>
+            )}
           </div>
 
           {/* Estadísticas generales */}
@@ -355,7 +359,7 @@ const CapacitacionesDashboard = () => {
                   : 'Crea una nueva capacitación para comenzar'
                 }
               </p>
-              {!(busqueda || filtroEstado !== 'todas' || filtroCategoria !== 'todas') && (
+              {isAdmin && !(busqueda || filtroEstado !== 'todas' || filtroCategoria !== 'todas') && (
                 <Link to="/capacitaciones/nueva">
                   <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
                     Crear Primera Capacitación
@@ -456,37 +460,39 @@ const CapacitacionesDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Footer con acciones */}
-                  <div className="px-6 pb-6">
-                    <div className="flex gap-2">
-                      <Link
-                        to={`/asignaciones/intuitiva/${cap.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 bg-purple-600 text-white text-center py-2 px-3 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
-                      >
-                        Asignar
-                      </Link>
-                      {user && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGestionarHorarios(cap.id);
-                          }}
-                          className="bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition text-sm font-medium"
-                          title="Gestionar Horarios"
+                  {/* Footer con acciones (solo admin) */}
+                  {isAdmin && (
+                    <div className="px-6 pb-6">
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/asignaciones/intuitiva/${cap.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 bg-purple-600 text-white text-center py-2 px-3 rounded-lg hover:bg-purple-700 transition text-sm font-medium"
                         >
-                          Horarios
-                        </button>
-                      )}
-                      <Link
-                        to={`/capacitaciones/${cap.id}/edit`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
-                      >
-                        Editar
-                      </Link>
+                          Asignar
+                        </Link>
+                        {user && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGestionarHorarios(cap.id);
+                            }}
+                            className="bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition text-sm font-medium"
+                            title="Gestionar Horarios"
+                          >
+                            Horarios
+                          </button>
+                        )}
+                        <Link
+                          to={`/capacitaciones/${cap.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
+                        >
+                          Editar
+                        </Link>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Indicador de estado en el borde */}
                   <div className={`absolute top-0 left-0 w-full h-1 ${

@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { ClipboardList, Trash2, BarChart3, Inbox } from 'lucide-react';
-import { useToast } from '../../../shared';
+import { useToast, useAuth } from '../../../shared';
 
 const SessionsPage = () => {
   const { id } = useParams(); // quiz ID
   const navigate = useNavigate();
   const toast = useToast();
+  const { isSupervisor } = useAuth();
   const [quiz, setQuiz] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,15 +137,17 @@ const SessionsPage = () => {
                 >
                   <ClipboardList className="w-4 h-4" /> Ver informe
                 </button>
-                <button
-                  onClick={() => {
-                    setSessionToDelete(session);
-                    setShowDeleteModal(true);
-                  }}
-                  className="text-sm bg-white border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2 font-medium"
-                >
-                  <Trash2 className="w-4 h-4" /> Eliminar
-                </button>
+                {!isSupervisor && (
+                  <button
+                    onClick={() => {
+                      setSessionToDelete(session);
+                      setShowDeleteModal(true);
+                    }}
+                    className="text-sm bg-white border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2 font-medium"
+                  >
+                    <Trash2 className="w-4 h-4" /> Eliminar
+                  </button>
+                )}
               </div>
             </div>
           </div>

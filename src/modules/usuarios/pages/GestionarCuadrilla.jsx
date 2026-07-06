@@ -11,18 +11,27 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Trash2, Pencil } from "lucide-react";
 import ImportarCuadrillaModal from "../components/ImportarCuadrillaModal";
 import EditarUsuarioModal from "../components/EditarUsuarioModal";
-import { BackButton, useToast, useConfirm } from "../../../shared";
+import { BackButton, useToast, useConfirm, useAuth, rutaInicial } from "../../../shared";
 import { useTurnosConfig } from "../../asignaciones";
 
 export default function GestionarCuadrilla() {
   const { supervisorId } = useParams();
+  const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { isAdmin, supervisorId: miSupervisorId, rol } = useAuth();
   const { turnos: turnosConfig } = useTurnosConfig();
+
+  // Un supervisor solo puede gestionar SU propia cuadrilla.
+  useEffect(() => {
+    if (!isAdmin && supervisorId !== miSupervisorId) {
+      navigate(rutaInicial(rol), { replace: true });
+    }
+  }, [isAdmin, supervisorId, miSupervisorId, rol, navigate]);
   const [supervisor, setSupervisor] = useState(null);
   const [cuadrilla, setCuadrilla] = useState([]);
   const [mostrarImportarModal, setMostrarImportarModal] = useState(false);
@@ -80,7 +89,11 @@ export default function GestionarCuadrilla() {
 
   return (
     <div className="p-6">
-      <BackButton to="/usuarios" label="Volver a Usuarios" className="mb-6" />
+      {isAdmin ? (
+        <BackButton to="/usuarios" label="Volver a Usuarios" className="mb-6" />
+      ) : (
+        <BackButton to="/mis-asignaciones" label="Volver a Mis Asignaciones" className="mb-6" />
+      )}
       {supervisor && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
@@ -96,13 +109,15 @@ export default function GestionarCuadrilla() {
               })()}
             </p>
           </div>
-          <button
-            onClick={() => setEditarSupervisor(true)}
-            className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shrink-0"
-          >
-            <Pencil className="w-4 h-4" />
-            Editar datos generales
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setEditarSupervisor(true)}
+              className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shrink-0"
+            >
+              <Pencil className="w-4 h-4" />
+              Editar datos generales
+            </button>
+          )}
         </div>
       )}
 

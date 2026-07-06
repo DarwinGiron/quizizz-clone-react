@@ -7,12 +7,13 @@ import { Eye, Pencil, Target, EyeOff, Gamepad2, Trash2, MessageSquare, FileSprea
 import { StartLiveSessionButton } from '../components';
 import { processSessionData, fetchSessionFeedback, endLiveSession } from '../../estadisticas';
 import { exportAllSessionsToExcel } from '../../estadisticas/utils/exportReport';
-import { BackButton, useToast } from '../../../shared';
+import { BackButton, useToast, useAuth } from '../../../shared';
 
 const QuizDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { isSupervisor } = useAuth();
   const [quiz, setQuiz] = useState(null);
   const [showAnswers, setShowAnswers] = useState(true);
   const [activeTab, setActiveTab] = useState('questions');
@@ -234,24 +235,26 @@ const QuizDetails = () => {
               <span className="flex items-center gap-1"><Gamepad2 className="w-4 h-4" /> {totalPlayed} {totalPlayed === 1 ? 'jugada' : 'jugadas'}</span>
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate(`/preview/${id}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors"
-            >
-              <Eye className="w-4 h-4" /> Vista previa
-            </button>
-            <button
-              onClick={() => navigate(`/edit/${id}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors"
-            >
-              <Pencil className="w-4 h-4" /> Editar
-            </button>
-          </div>
+          {!isSupervisor && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate(`/preview/${id}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Eye className="w-4 h-4" /> Vista previa
+              </button>
+              <button
+                onClick={() => navigate(`/edit/${id}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Pencil className="w-4 h-4" /> Editar
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mt-5">
-          <StartLiveSessionButton quizId={quiz.id} />
+          {!isSupervisor && <StartLiveSessionButton quizId={quiz.id} />}
           <button
             onClick={handleExportAllSessions}
             disabled={exportingAll || sessions.length === 0}
@@ -353,20 +356,22 @@ const QuizDetails = () => {
                       Código: {s.joinCode} · {s.participantsCount} {s.participantsCount === 1 ? 'participante' : 'participantes'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 ml-4 shrink-0">
-                    <button
-                      onClick={() => navigate(`/live/${id}/${s.sessionId}`)}
-                      className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg px-4 py-2 rounded-lg text-sm font-semibold transition-shadow"
-                    >
-                      <LogIn className="w-4 h-4" /> Reingresar
-                    </button>
-                    <button
-                      onClick={() => setSessionToEnd(s)}
-                      className="flex items-center gap-1.5 bg-white border border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                    >
-                      Terminar
-                    </button>
-                  </div>
+                  {!isSupervisor && (
+                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                      <button
+                        onClick={() => navigate(`/live/${id}/${s.sessionId}`)}
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg px-4 py-2 rounded-lg text-sm font-semibold transition-shadow"
+                      >
+                        <LogIn className="w-4 h-4" /> Reingresar
+                      </button>
+                      <button
+                        onClick={() => setSessionToEnd(s)}
+                        className="flex items-center gap-1.5 bg-white border border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        Terminar
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -410,12 +415,14 @@ const QuizDetails = () => {
                     >
                       Ver informe
                     </button>
-                    <button
-                      onClick={() => { setSessionToDelete(session); setShowDeleteModal(true); }}
-                      className="flex items-center gap-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                    </button>
+                    {!isSupervisor && (
+                      <button
+                        onClick={() => { setSessionToDelete(session); setShowDeleteModal(true); }}
+                        className="flex items-center gap-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

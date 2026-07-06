@@ -35,15 +35,15 @@ const Login = () => {
     setError(null);
     setIsLoading(true);
     try {
-      // 1) Intentar login custom de supervisor (colección `usuarios`).
+      // 1) Intentar login custom de supervisor/capacitador (email sintético).
       const result = await loginSupervisor(email, password);
-      if (result.ok) {
-        navigate('/mis-asignaciones');
-        return;
+      if (!result.ok) {
+        // 2) Si no es una cuenta con email sintético, intentar Firebase Auth normal (admin).
+        await signInWithEmailAndPassword(auth, email, password);
       }
-
-      // 2) Si no es supervisor, intentar Firebase Auth (admin / usuario).
-      await signInWithEmailAndPassword(auth, email, password);
+      // El rol real se resuelve async desde el perfil; navegamos a /dashboard
+      // y dejamos que PrivateRoute redirija a la ruta inicial de cada rol
+      // (por ejemplo, un supervisor termina en /mis-asignaciones).
       navigate('/dashboard');
     } catch (err) {
       setError(traducirError(err.code));

@@ -11,6 +11,7 @@ import {
   ConfirmProvider,
   ErrorBoundary,
   NotFound,
+  rutaInicial,
 } from './shared';
 
 // Cada página se importa con lazy() para que Vite genere un chunk aparte:
@@ -65,17 +66,14 @@ function RouteFallback() {
   );
 }
 
-// Componente para rutas privadas (con control opcional por rol)
+// Componente para rutas privadas (con control opcional por rol). Si el rol
+// no corresponde, redirige a la ruta inicial de SU rol (no siempre /dashboard).
 function PrivateRoute({ children, roles }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="p-10">Cargando...</div>;
   if (!user) return <Navigate to="/login" />;
   if (roles && !roles.includes(user.rol)) {
-    return (
-      <Navigate
-        to={user.rol === 'supervisor' ? '/mis-asignaciones' : '/dashboard'}
-      />
-    );
+    return <Navigate to={rutaInicial(user.rol)} />;
   }
   return children;
 }
@@ -101,7 +99,7 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'usuario']}>
               <MainLayout>
                 <Dashboard />
               </MainLayout>
@@ -111,7 +109,7 @@ function App() {
         <Route
           path="/create"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador']}>
               <MainLayout>
                 <CreateQuiz />
               </MainLayout>
@@ -121,7 +119,7 @@ function App() {
         <Route
           path="/myquizzes"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <MyQuizzes />
               </MainLayout>
@@ -131,7 +129,7 @@ function App() {
         <Route
           path="/quiz/:id"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <QuizDetail />
               </MainLayout>
@@ -141,7 +139,7 @@ function App() {
         <Route
           path="/edit/:id"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador']}>
               <MainLayout>
                 <EditQuiz />
               </MainLayout>
@@ -151,7 +149,7 @@ function App() {
         <Route
           path="/preview/:id"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador']}>
               <MainLayout>
                 <PreviewQuiz />
               </MainLayout>
@@ -161,7 +159,7 @@ function App() {
         <Route
           path="/live/:quizId/:sessionId"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador']}>
               <LiveSession />
             </PrivateRoute>
           }
@@ -169,7 +167,7 @@ function App() {
         <Route
           path="/sessions/:sessionId"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <SessionsPage />
               </MainLayout>
@@ -179,7 +177,7 @@ function App() {
         <Route
           path="/sessions/:sessionId/report"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <SessionReport />
               </MainLayout>
@@ -189,7 +187,7 @@ function App() {
         <Route
           path="/sessions/:sessionId/stats"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <SessionStats />
               </MainLayout>
@@ -201,7 +199,7 @@ function App() {
         <Route
           path="/capacitaciones"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <CapacitacionesDashboard />
               </MainLayout>
@@ -211,7 +209,7 @@ function App() {
         <Route
           path="/capacitaciones/nueva"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin']}>
               <MainLayout>
                 <CreateCapacitacion />
               </MainLayout>
@@ -221,7 +219,7 @@ function App() {
         <Route
           path="/capacitaciones/:id/edit"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin']}>
               <MainLayout>
                 <EditCapacitacion />
               </MainLayout>
@@ -231,7 +229,7 @@ function App() {
         <Route
           path="/capacitaciones/:id/detalle"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <CapacitacionDetail />
               </MainLayout>
@@ -241,7 +239,7 @@ function App() {
         <Route
           path="/capacitaciones/:capacitacionId/horarios"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <HorariosPorCapacitacion />
               </MainLayout>
@@ -253,7 +251,7 @@ function App() {
         <Route
           path="/usuarios"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin']}>
               <MainLayout>
                 <UsuariosAdmin />
               </MainLayout>
@@ -263,7 +261,7 @@ function App() {
         <Route
           path="/cuadrilla/:supervisorId"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'supervisor']}>
               <MainLayout>
                 <GestionarCuadrilla />
               </MainLayout>
@@ -275,7 +273,7 @@ function App() {
         <Route
           path="/evaluacion/nueva"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador']}>
               <MainLayout>
                 <SeleccionTipoEvaluacion />
               </MainLayout>
@@ -285,7 +283,7 @@ function App() {
         <Route
           path="/asignaciones"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin']}>
               <MainLayout>
                 <Asignaciones />
               </MainLayout>
@@ -295,7 +293,7 @@ function App() {
         <Route
           path="/asignaciones/intuitiva/:capacitacionId"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin']}>
               <MainLayout>
                 <AsignacionIntuitiva />
               </MainLayout>
@@ -329,11 +327,11 @@ function App() {
         <Route path="/join" element={<JoinSession />} />
         <Route path="/join/:sessionId" element={<JoinSession />} />
 
-        {/* Estadísticas en vivo (pública para admin) */}
+        {/* Estadísticas en vivo (admin/capacitador) */}
         <Route
           path="/admin/session/:quizId/:sessionId/stats"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador']}>
               <SessionStatsAdmin />
             </PrivateRoute>
           }
@@ -341,7 +339,7 @@ function App() {
         <Route
           path="/estadisticas-totales/:sessionId"
           element={
-            <PrivateRoute>
+            <PrivateRoute roles={['admin', 'capacitador', 'supervisor']}>
               <MainLayout>
                 <EstadisticasTotales />
               </MainLayout>

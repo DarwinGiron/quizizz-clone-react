@@ -4,8 +4,10 @@ import { db } from '../../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import { MoreVertical, Eye, Users, TrendingUp, Calendar, BookOpen, Target } from 'lucide-react';
 import { TipoEvaluacionModal, EstadisticasCapacitacionModal } from '../components';
+import { useAuth } from '../../../shared';
 
 const MyQuizzes = () => {
+  const { isSupervisor } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [quizStats, setQuizStats] = useState({});
   const [dropdownOpen, setDropdownOpen] = useState(null);
@@ -155,15 +157,19 @@ const MyQuizzes = () => {
             <div className="bg-indigo-100 p-2.5 rounded-lg">
               <BookOpen className="w-6 h-6 text-indigo-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Mis Quizzes</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isSupervisor ? 'Reportes' : 'Mis Quizzes'}
+            </h1>
           </div>
-          <button
-            onClick={() => setShowTipoModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg transition-shadow text-white font-semibold py-2.5 px-5 rounded-lg"
-          >
-            <span className="text-lg leading-none">+</span>
-            <span className="text-sm sm:text-base">Crear nueva evaluación</span>
-          </button>
+          {!isSupervisor && (
+            <button
+              onClick={() => setShowTipoModal(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg transition-shadow text-white font-semibold py-2.5 px-5 rounded-lg"
+            >
+              <span className="text-lg leading-none">+</span>
+              <span className="text-sm sm:text-base">Crear nueva evaluación</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -176,14 +182,22 @@ const MyQuizzes = () => {
             <div className="bg-indigo-100 p-4 rounded-full w-fit mx-auto mb-4">
               <BookOpen className="w-10 h-10 text-indigo-500" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No tienes quizzes aún</h3>
-            <p className="text-gray-500 mb-6">Crea tu primera evaluación para comenzar a capacitar a tu equipo</p>
-            <button
-              onClick={() => setShowTipoModal(true)}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg transition-shadow text-white font-semibold py-3 px-6 rounded-lg"
-            >
-              Crear primer quiz
-            </button>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              {isSupervisor ? 'Aún no hay evaluaciones' : 'No tienes quizzes aún'}
+            </h3>
+            <p className="text-gray-500 mb-6">
+              {isSupervisor
+                ? 'Cuando haya sesiones finalizadas, sus reportes aparecerán aquí.'
+                : 'Crea tu primera evaluación para comenzar a capacitar a tu equipo'}
+            </p>
+            {!isSupervisor && (
+              <button
+                onClick={() => setShowTipoModal(true)}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg transition-shadow text-white font-semibold py-3 px-6 rounded-lg"
+              >
+                Crear primer quiz
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6">
@@ -231,13 +245,15 @@ const MyQuizzes = () => {
                       </div>
 
                       <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/preview/${quiz.id}`); }}
-                          title="Vista previa"
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        >
-                          <Eye className="w-4.5 h-4.5" size={18} />
-                        </button>
+                        {!isSupervisor && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/preview/${quiz.id}`); }}
+                            title="Vista previa"
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            <Eye className="w-4.5 h-4.5" size={18} />
+                          </button>
+                        )}
                         {quiz.capacitacionVinculada && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setSelectedQuizForStats(quiz); setShowEstadisticasModal(true); }}
@@ -247,12 +263,14 @@ const MyQuizzes = () => {
                             Stats
                           </button>
                         )}
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleDropdown(e, index); }}
-                          className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors dropdown-toggle"
-                        >
-                          <MoreVertical size={18} />
-                        </button>
+                        {!isSupervisor && (
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleDropdown(e, index); }}
+                            className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors dropdown-toggle"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+                        )}
                       </div>
                     </div>
 

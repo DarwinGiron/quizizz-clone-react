@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, updateDoc, deleteField, setDoc } from 'firebase/firestore';
 import { ShieldAlert, ShieldCheck, KeyRound, ChevronRight } from 'lucide-react';
 import { db } from '../../../firebase/config';
 import { useToast, usuarioToEmail, crearCuentaAuth } from '../../../shared';
@@ -27,6 +27,8 @@ const ActivarAccesoModal = ({ usuario, onClose, onActivado }) => {
         contrasena: deleteField(),
         password: deleteField(),
       });
+      // Colección espejo que las reglas de Firestore pueden leer por uid.
+      await setDoc(doc(db, 'roles', authUid), { rol: usuario.rol || 'supervisor' });
       toast.success(
         `Acceso activado. Comunícale a ${usuario.nombre || usuario.usuario} su nueva contraseña.`
       );

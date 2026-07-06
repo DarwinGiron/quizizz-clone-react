@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
+  ClipboardList,
 } from 'lucide-react';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +19,7 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { sidebarOpen, toggleSidebar } = useSidebar();
-  const { user, isSupervisor, logout } = useAuth();
+  const { user, rol, isSupervisor, isCapacitador, supervisorId, logout } = useAuth();
 
   const isActive = (path) => {
     if (path === '/myquizzes') {
@@ -27,17 +28,65 @@ const Sidebar = () => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  // Navegación para supervisores: solo su vista exclusiva.
+  // Navegación por rol.
   const supervisorNav = [
     {
       path: '/mis-asignaciones',
       icon: Target,
       label: 'Mis Asignaciones',
       description: 'Asignar mi cuadrilla'
+    },
+    {
+      path: `/cuadrilla/${supervisorId}`,
+      icon: Users,
+      label: 'Mi Cuadrilla',
+      description: 'Gestionar mi personal'
+    },
+    {
+      path: '/capacitaciones',
+      icon: BookOpen,
+      label: 'Capacitaciones',
+      description: 'Ver cursos y formación'
+    },
+    {
+      path: '/myquizzes',
+      icon: ClipboardList,
+      label: 'Reportes',
+      description: 'Resultados de evaluaciones'
     }
   ];
 
-  // Navegación completa (admin / usuarios autoregistrados).
+  const capacitadorNav = [
+    {
+      path: '/dashboard',
+      icon: Home,
+      label: 'Dashboard',
+      description: 'Panel principal'
+    },
+    {
+      path: '/capacitaciones',
+      icon: BookOpen,
+      label: 'Capacitaciones',
+      description: 'Ver cursos y formación'
+    },
+    {
+      path: '/myquizzes',
+      icon: Layers,
+      label: 'Mis Quizzes',
+      description: 'Evaluaciones creadas'
+    }
+  ];
+
+  const usuarioNav = [
+    {
+      path: '/dashboard',
+      icon: Home,
+      label: 'Dashboard',
+      description: 'Panel principal'
+    }
+  ];
+
+  // Navegación completa del admin.
   const adminNav = [
     {
       path: '/dashboard',
@@ -71,7 +120,13 @@ const Sidebar = () => {
     }
   ];
 
-  const navItems = isSupervisor ? supervisorNav : adminNav;
+  const navPorRol = {
+    admin: adminNav,
+    capacitador: capacitadorNav,
+    supervisor: supervisorNav,
+    usuario: usuarioNav,
+  };
+  const navItems = navPorRol[rol] || usuarioNav;
 
   const handleLogout = async () => {
     await logout();
@@ -99,7 +154,9 @@ const Sidebar = () => {
           <div>
             <h1 className="text-xl font-bold text-white text-center mb-2">Cuestionary</h1>
             <p className="text-xs text-gray-400 text-center">
-              {isSupervisor ? `Supervisor · ${user?.nombre || ''}` : 'Sistema de evaluación'}
+              {isSupervisor && `Supervisor · ${user?.nombre || ''}`}
+              {isCapacitador && `Capacitador · ${user?.nombre || ''}`}
+              {!isSupervisor && !isCapacitador && 'Sistema de evaluación'}
             </p>
           </div>
         </div>

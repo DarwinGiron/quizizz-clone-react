@@ -3,9 +3,11 @@ rules_version = '2';
 // Reglas de seguridad de Firestore para "Capacitaciones".
 // Cómo publicarlas: ver SEGURIDAD.md en la raíz del proyecto.
 //
-// IMPORTANTE: antes de publicar estas reglas, verifica que el documento
-// usuarios/{tu-uid-de-admin} tenga el campo `rol: "admin"`. Si no lo tiene,
-// quedarás bloqueado de tu propia base de datos.
+// IMPORTANTE: antes de publicar estas reglas, verifica que:
+//   1. usuarios/{tu-uid-de-admin} tenga el campo `rol: "admin"`.
+//   2. roles/{tu-uid-de-admin} exista con `{ rol: "admin" }`.
+// Si no, quedarás bloqueado de tu propia base de datos. Ver SEGURIDAD.md
+// sección 0 y la sección nueva sobre la colección `roles`.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -13,12 +15,37 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // El rol de admin se decide leyendo el documento de perfil del usuario
-    // autenticado (usuarios/{uid}), NUNCA por una lista de emails en el cliente.
-    function isAdmin() {
+    // Las reglas no pueden hacer queries, así que no pueden resolver
+    // "el doc de usuarios cuyo authUid == mi uid" (los supervisores y
+    // capacitadores tienen un doc con ID aleatorio). Por eso existe la
+    // colección espejo roles/{authUid} -> { rol }, escrita al crear o
+    // migrar cada cuenta (ver NuevoSupervisorModal.jsx / UsuarioListItem.jsx).
+    function rolEnColeccionRoles() {
       return isSignedIn() &&
-        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+        exists(/databases/$(database)/documents/roles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.rol
+        : null;
+    }
+
+    // El admin original tiene su perfil en usuarios/{uid} (mismo id que su
+    // uid de Auth) — se mantiene como fallback para no romper esa cuenta.
+    function rolEnUsuarios() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol
+        : null;
+    }
+
+    function isAdmin() {
+      return rolEnColeccionRoles() == 'admin' || rolEnUsuarios() == 'admin';
+    }
+
+    function isCapacitador() {
+      return rolEnColeccionRoles() == 'capacitador' || rolEnUsuarios() == 'capacitador';
+    }
+
+    function isSupervisor() {
+      return rolEnColeccionRoles() == 'supervisor' || rolEnUsuarios() == 'supervisor';
     }
 
     // Prohíbe para siempre que el documento de un usuario contenga una
@@ -28,53 +55,75 @@ service cloud.firestore {
       return !request.resource.data.keys().hasAny(['contraseña', 'contrasena', 'password']);
     }
 
+    // ¿El usuario autenticado es el supervisor dueño de esta cuadrilla?
+    // (su authUid en usuarios/{supervisorId} coincide con su uid de Auth).
+    function esDueñoDeCuadrilla(supervisorId) {
+      return isSignedIn() &&
+        supervisorId != null &&
+        exists(/databases/$(database)/documents/usuarios/$(supervisorId)) &&
+        get(/databases/$(database)/documents/usuarios/$(supervisorId)).data.authUid == request.auth.uid;
+    }
+
     match /usuarios/{userId} {
       allow read: if isSignedIn();
       // El acceso es solo por invitación: todas las cuentas (admin,
-      // supervisor) se crean desde el panel de Usuarios por un admin.
-      // No existe autoregistro, así que create/update quedan restringidos
-      // al admin (evita que una cuenta recién creada se autoasigne
-      // rol: "admin" escribiendo su propio documento).
+      // capacitador, supervisor) se crean desde el panel de Usuarios por
+      // un admin. No existe autoregistro, así que create/update quedan
+      // restringidos al admin (evita que una cuenta recién creada se
+      // autoasigne rol: "admin" escribiendo su propio documento).
       allow create, update: if isAdmin() && sinCamposDeContrasena();
       allow delete: if isAdmin();
     }
 
+    // Colección espejo rol-por-uid (ver funciones de arriba). Cada quien
+    // puede leer su propio rol; solo el admin la escribe.
+    match /roles/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
     match /cuadrilla/{docId} {
       allow read: if isSignedIn();
-      // Nota: en esta versión cualquier usuario autenticado (admin o supervisor)
-      // puede escribir cuadrillas. Restringir a "solo su propia cuadrilla"
-      // requeriría resolver supervisor_id -> uid con una Cloud Function.
-      allow write: if isSignedIn();
+      // El supervisor solo gestiona SU propia cuadrilla; el admin todas.
+      allow create: if isAdmin() || esDueñoDeCuadrilla(request.resource.data.supervisor_id);
+      allow update, delete: if isAdmin() || esDueñoDeCuadrilla(resource.data.supervisor_id);
     }
 
     match /capacitaciones/{capId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isAdmin();
+      // Capacitador y supervisor solo tienen vista de lectura; crear,
+      // editar y borrar capacitaciones es exclusivo del admin.
+      allow create, update, delete: if isAdmin();
     }
 
     match /capacitacion_bloques/{bloqueId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      // Crear/eliminar bloques (cambia cupos y horarios) es solo admin.
+      allow create, delete: if isAdmin();
+      // Actualizar: el admin puede todo; cualquier otro autenticado
+      // (supervisor asignando personal) solo puede tocar `participantes`.
+      allow update: if isAdmin() ||
+        (isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantes']));
     }
 
     match /quizzes/{quizId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isAdmin();
+      // El capacitador crea/edita/lanza evaluaciones igual que el admin;
+      // el supervisor solo las ve (reportes de sesiones ya finalizadas).
+      allow create, update, delete: if isAdmin() || isCapacitador();
     }
 
     match /sessionStats/{sessionId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create, update, delete: if isAdmin() || isCapacitador();
     }
 
     // Colección legacy detectada en el código (src/modules/estadisticas/components/SessionStats.jsx).
     // Revisar si sigue en uso; se deja con las mismas reglas que sessionStats por seguridad.
     match /sessions/{sessionId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if isAdmin() || isCapacitador();
     }
 
     // Configuración global de la app (ej. config/turnos: nombre y horario

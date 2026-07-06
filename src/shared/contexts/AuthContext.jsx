@@ -40,6 +40,11 @@ export const usuarioToEmail = (usuario) => {
 // Se conserva por si algún documento de administrador aún no tiene el campo `rol` migrado.
 const ADMIN_EMAILS = ['admin@admin.com', 'darwingirn@gmail.com'];
 
+// Ruta a la que debe aterrizar cada rol tras iniciar sesión (y a la que se
+// redirige si intenta entrar a una ruta que no le corresponde).
+export const rutaInicial = (rol) =>
+  rol === 'supervisor' ? '/mis-asignaciones' : '/dashboard';
+
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -143,6 +148,7 @@ export const AuthProvider = ({ children }) => {
     user,
     rol: user?.rol || null,
     isAdmin: user?.rol === 'admin',
+    isCapacitador: user?.rol === 'capacitador',
     isSupervisor: user?.rol === 'supervisor',
     supervisorId: user?.supervisorId || null,
     loading: authLoading,
