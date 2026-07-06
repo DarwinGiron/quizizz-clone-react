@@ -72,7 +72,10 @@ const Dashboard = () => {
           ...doc.data(),
         }));
 
-        if (caps.length === 0) {
+        // Solo en desarrollo: si no hay capacitaciones reales, usar datos de
+        // ejemplo para poder trabajar la UI. En producción se muestra el
+        // estado vacío real ("No hay capacitaciones registradas...").
+        if (caps.length === 0 && import.meta.env.DEV) {
           caps = [
             { id: 'ejemplo1', titulo: 'Seguridad Industrial y Prevención de Riesgos', categoria: 'Seguridad', fechaInicio: '2025-01-15', fechaFin: '2025-01-30', instructor: 'Ing. María García' },
             { id: 'ejemplo2', titulo: 'Manejo de Equipos Pesados', categoria: 'Técnica', fechaInicio: '2025-01-20', fechaFin: '2025-02-05', instructor: 'Tec. Carlos López' },
@@ -89,7 +92,7 @@ const Dashboard = () => {
           ...doc.data(),
         }));
 
-        if (blqs.length === 0) {
+        if (blqs.length === 0 && import.meta.env.DEV) {
           blqs = [
             { id: 'bloque1', capacitacion_id: 'ejemplo1', fecha: '2025-01-15', cupo_disponible: 25, participantes: ['Juan Pérez', 'María González', 'Carlos López'] },
             { id: 'bloque2', capacitacion_id: 'ejemplo2', fecha: '2025-01-20', cupo_disponible: 15, participantes: ['Ana Martín', 'Pedro Rodríguez'] },

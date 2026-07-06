@@ -27,7 +27,9 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
         ...doc.data()
       }));
 
-      if (capacitacionesData.length === 0) {
+      // Solo en desarrollo: si no hay capacitaciones reales, usar datos de
+      // ejemplo para poder trabajar la UI sin datos reales.
+      if (capacitacionesData.length === 0 && import.meta.env.DEV) {
         capacitacionesData = [
           {
             id: 'ejemplo1',

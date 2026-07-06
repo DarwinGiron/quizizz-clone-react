@@ -141,8 +141,9 @@ export default function AsignacionIntuitiva() {
           }
         }
 
-        // Si no hay supervisores reales, añadir datos de ejemplo para testing
-        if (supervisoresFiltrados.length === 0) {
+        // Solo en desarrollo: si no hay supervisores reales, añadir datos de
+        // ejemplo para poder trabajar la UI sin datos reales.
+        if (supervisoresFiltrados.length === 0 && import.meta.env.DEV) {
           supervisoresFiltrados = [
             {
               id: 'supervisor_ejemplo_1',
@@ -213,17 +214,15 @@ export default function AsignacionIntuitiva() {
       const snap = await getDocs(q);
       const cuadrillaReal = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Si no hay datos reales, usar datos de ejemplo específicos para cada supervisor
-      if (cuadrillaReal.length === 0) {
-        const datosEjemplo = getSupervisorEjemploData(supervisorId);
-        return datosEjemplo;
+      // Solo en desarrollo: si no hay datos reales, usar datos de ejemplo.
+      if (cuadrillaReal.length === 0 && import.meta.env.DEV) {
+        return getSupervisorEjemploData(supervisorId);
       }
-      
+
       return cuadrillaReal;
     } catch (error) {
       console.error('Error al cargar cuadrilla:', error);
-      // En caso de error, retornar datos de ejemplo
-      return getSupervisorEjemploData(supervisorId);
+      return import.meta.env.DEV ? getSupervisorEjemploData(supervisorId) : [];
     }
   };
 

@@ -3,7 +3,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import MainLayout from './layouts/MainLayout';
 import { useConfetti } from './shared/hooks/useConfetti';
-import { SidebarProvider, AuthProvider, useAuth, ToastProvider, ConfirmProvider } from './shared';
+import {
+  SidebarProvider,
+  AuthProvider,
+  useAuth,
+  ToastProvider,
+  ConfirmProvider,
+  ErrorBoundary,
+  NotFound,
+} from './shared';
 
 // Cada página se importa con lazy() para que Vite genere un chunk aparte:
 // el navegador solo la descarga cuando el usuario navega a esa ruta.
@@ -77,6 +85,7 @@ function App() {
   useConfetti();
 
   return (
+    <ErrorBoundary>
     <ToastProvider>
     <ConfirmProvider>
     <SidebarProvider>
@@ -340,8 +349,8 @@ function App() {
           }
         />
 
-        {/* Fallback: cualquier ruta no definida redirige a login */}
-        <Route path="*" element={<Navigate to="/login" />} />
+        {/* Cualquier ruta no definida muestra una página 404 amigable */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
         </Suspense>
     </Router>
@@ -349,6 +358,7 @@ function App() {
   </SidebarProvider>
     </ConfirmProvider>
     </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

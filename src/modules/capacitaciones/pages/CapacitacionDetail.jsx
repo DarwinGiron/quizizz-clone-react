@@ -51,8 +51,10 @@ const CapacitacionDetail = () => {
         
         if (capacitacionSnap.exists()) {
           setCapacitacion({ id: capacitacionSnap.id, ...capacitacionSnap.data() });
-        } else {
-          // Si no existe en la BD, usar datos de ejemplo
+        } else if (import.meta.env.DEV) {
+          // Solo en desarrollo: si no existe en la BD, usar datos de ejemplo
+          // para poder trabajar la UI sin datos reales. En producción se
+          // muestra el estado "Capacitación no encontrada" (ver abajo).
           const datosEjemplo = {
             id: id,
             titulo: 'Seguridad Industrial y Prevención de Riesgos',
@@ -86,8 +88,8 @@ const CapacitacionDetail = () => {
           ...doc.data() 
         }));
 
-        // Si no hay bloques reales, crear datos de ejemplo
-        if (bloquesData.length === 0) {
+        // Solo en desarrollo: si no hay bloques reales, usar datos de ejemplo.
+        if (bloquesData.length === 0 && import.meta.env.DEV) {
           const bloquesEjemplo = [
             {
               id: 'bloque1',

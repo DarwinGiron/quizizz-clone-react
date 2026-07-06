@@ -2,6 +2,8 @@
 export { default as BackButton } from './BackButton';
 export { default as Sidebar } from './Sidebar';
 export { default as Layout } from './Layout';
+export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as NotFound } from './NotFound';
 
 // Componentes de Avatar
 export {
