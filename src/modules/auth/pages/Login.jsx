@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../firebase/config';
 import { useAuth } from '../../../shared';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, LogIn, GraduationCap } from 'lucide-react';
 
@@ -186,13 +186,8 @@ const Login = () => {
             </form>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-              ¿No tienes una cuenta?{' '}
-              <Link
-                to="/register"
-                className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-              >
-                Regístrate aquí
-              </Link>
+              El acceso es solo por invitación. Si necesitas una cuenta,
+              contacta a tu administrador.
             </p>
           </div>
         </motion.div>

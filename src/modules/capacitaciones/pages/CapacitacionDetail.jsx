@@ -51,30 +51,6 @@ const CapacitacionDetail = () => {
         
         if (capacitacionSnap.exists()) {
           setCapacitacion({ id: capacitacionSnap.id, ...capacitacionSnap.data() });
-        } else if (import.meta.env.DEV) {
-          // Solo en desarrollo: si no existe en la BD, usar datos de ejemplo
-          // para poder trabajar la UI sin datos reales. En producción se
-          // muestra el estado "Capacitación no encontrada" (ver abajo).
-          const datosEjemplo = {
-            id: id,
-            titulo: 'Seguridad Industrial y Prevención de Riesgos',
-            descripcion: 'Capacitación integral sobre normas de seguridad, identificación de riesgos y uso correcto de equipos de protección personal.',
-            categoria: 'Seguridad',
-            fecha_inicio: '2025-08-15',
-            fecha_fin: '2025-08-30',
-            duracionBloque: 60,
-            cupoBloque: 25,
-            horaInicioDia: '08:00',
-            horaFinDia: '17:00',
-            instructor: 'Ing. María García',
-            objetivos: [
-              'Identificar los principales riesgos en el área de trabajo',
-              'Utilizar correctamente los equipos de protección personal',
-              'Aplicar procedimientos de seguridad establecidos',
-              'Conocer protocolos de emergencia y evacuación'
-            ]
-          };
-          setCapacitacion(datosEjemplo);
         }
 
         // Fetch bloques
@@ -83,69 +59,12 @@ const CapacitacionDetail = () => {
           where('capacitacion_id', '==', id)
         );
         const bloquesSnapshot = await getDocs(bloquesQuery);
-        const bloquesData = bloquesSnapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data() 
+        const bloquesData = bloquesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
         }));
 
-        // Solo en desarrollo: si no hay bloques reales, usar datos de ejemplo.
-        if (bloquesData.length === 0 && import.meta.env.DEV) {
-          const bloquesEjemplo = [
-            {
-              id: 'bloque1',
-              capacitacion_id: id,
-              fecha: '2025-08-15',
-              hora_inicio: '08:00',
-              hora_fin: '09:00',
-              cupo_disponible: 25,
-              participantes: ['Juan Pérez', 'María González', 'Carlos López'],
-              disponible: true
-            },
-            {
-              id: 'bloque2',
-              capacitacion_id: id,
-              fecha: '2025-08-15',
-              hora_inicio: '09:00',
-              hora_fin: '10:00',
-              cupo_disponible: 25,
-              participantes: ['Ana Martín', 'Pedro Rodríguez'],
-              disponible: true
-            },
-            {
-              id: 'bloque3',
-              capacitacion_id: id,
-              fecha: '2025-08-16',
-              hora_inicio: '08:00',
-              hora_fin: '09:00',
-              cupo_disponible: 25,
-              participantes: ['Luis Hernández', 'Sofia Castro', 'Miguel Torres', 'Laura Jiménez'],
-              disponible: true
-            },
-            {
-              id: 'bloque4',
-              capacitacion_id: id,
-              fecha: '2025-08-16',
-              hora_inicio: '10:00',
-              hora_fin: '11:00',
-              cupo_disponible: 25,
-              participantes: [],
-              disponible: false
-            },
-            {
-              id: 'bloque5',
-              capacitacion_id: id,
-              fecha: '2025-08-17',
-              hora_inicio: '14:00',
-              hora_fin: '15:00',
-              cupo_disponible: 25,
-              participantes: ['Roberto Silva', 'Carmen Vega'],
-              disponible: true
-            }
-          ];
-          setBloques(bloquesEjemplo);
-        } else {
-          setBloques(bloquesData);
-        }
+        setBloques(bloquesData);
 
       } catch (error) {
         console.error('Error al cargar datos:', error);
@@ -176,27 +95,16 @@ const CapacitacionDetail = () => {
     setActualizando(bloqueId);
     
     try {
-      // Si es un bloque de ejemplo, solo actualizar el estado local
-      if (bloqueId.startsWith('bloque')) {
-        setBloques(prev => prev.map(bloque => 
-          bloque.id === bloqueId 
-            ? { ...bloque, disponible: !disponibleActual }
-            : bloque
-        ));
-      } else {
-        // Actualizar en Firestore
-        const bloqueRef = doc(db, 'capacitacion_bloques', bloqueId);
-        await updateDoc(bloqueRef, {
-          disponible: !disponibleActual
-        });
+      const bloqueRef = doc(db, 'capacitacion_bloques', bloqueId);
+      await updateDoc(bloqueRef, {
+        disponible: !disponibleActual
+      });
 
-        // Actualizar estado local
-        setBloques(prev => prev.map(bloque => 
-          bloque.id === bloqueId 
-            ? { ...bloque, disponible: !disponibleActual }
-            : bloque
-        ));
-      }
+      setBloques(prev => prev.map(bloque =>
+        bloque.id === bloqueId
+          ? { ...bloque, disponible: !disponibleActual }
+          : bloque
+      ));
     } catch (error) {
       console.error('Error al actualizar disponibilidad:', error);
       toast.error('Error al actualizar la disponibilidad del bloque');
@@ -223,17 +131,10 @@ const CapacitacionDetail = () => {
     setActualizando(bloqueId);
     
     try {
-      // Si es un bloque de ejemplo, solo actualizar el estado local
-      if (bloqueId.startsWith('bloque')) {
-        setBloques(prev => prev.filter(bloque => bloque.id !== bloqueId));
-      } else {
-        // Eliminar de Firestore
-        const bloqueRef = doc(db, 'capacitacion_bloques', bloqueId);
-        await deleteDoc(bloqueRef);
+      const bloqueRef = doc(db, 'capacitacion_bloques', bloqueId);
+      await deleteDoc(bloqueRef);
 
-        // Actualizar estado local
-        setBloques(prev => prev.filter(bloque => bloque.id !== bloqueId));
-      }
+      setBloques(prev => prev.filter(bloque => bloque.id !== bloqueId));
     } catch (error) {
       console.error('Error al eliminar bloque:', error);
       toast.error('Error al eliminar el bloque');
@@ -254,20 +155,12 @@ const CapacitacionDetail = () => {
     try {
       for (const bloque of bloquesDelDia) {
         if (bloque.disponible === false) {
-          if (bloque.id.startsWith('bloque')) {
-            // Actualizar estado local para bloques de ejemplo
-            setBloques(prev => prev.map(b => 
-              b.id === bloque.id ? { ...b, disponible: true } : b
-            ));
-          } else {
-            // Actualizar en Firestore
-            const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
-            await updateDoc(bloqueRef, { disponible: true });
-          }
+          const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
+          await updateDoc(bloqueRef, { disponible: true });
         }
       }
 
-      // Actualizar estado local para bloques reales
+      // Actualizar estado local
       setBloques(prev => prev.map(bloque => 
         bloquesDelDia.some(b => b.id === bloque.id) && bloque.disponible === false
           ? { ...bloque, disponible: true }
@@ -299,20 +192,12 @@ const CapacitacionDetail = () => {
     try {
       for (const bloque of bloquesDelDia) {
         if (bloque.disponible !== false) {
-          if (bloque.id.startsWith('bloque')) {
-            // Actualizar estado local para bloques de ejemplo
-            setBloques(prev => prev.map(b => 
-              b.id === bloque.id ? { ...b, disponible: false } : b
-            ));
-          } else {
-            // Actualizar en Firestore
-            const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
-            await updateDoc(bloqueRef, { disponible: false });
-          }
+          const bloqueRef = doc(db, 'capacitacion_bloques', bloque.id);
+          await updateDoc(bloqueRef, { disponible: false });
         }
       }
 
-      // Actualizar estado local para bloques reales
+      // Actualizar estado local
       setBloques(prev => prev.map(bloque => 
         bloquesDelDia.some(b => b.id === bloque.id) && bloque.disponible !== false
           ? { ...bloque, disponible: false }

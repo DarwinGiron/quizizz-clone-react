@@ -141,29 +141,6 @@ export default function AsignacionIntuitiva() {
           }
         }
 
-        // Solo en desarrollo: si no hay supervisores reales, añadir datos de
-        // ejemplo para poder trabajar la UI sin datos reales.
-        if (supervisoresFiltrados.length === 0 && import.meta.env.DEV) {
-          supervisoresFiltrados = [
-            {
-              id: 'supervisor_ejemplo_1',
-              nombre: 'Juan Pérez - Supervisor',
-              rol: 'supervisor',
-              usuario: 'juan.perez@empresa.com',
-              codigo: 'SUP001',
-              tipo: 'ejemplo'
-            },
-            {
-              id: 'supervisor_ejemplo_2', 
-              nombre: 'Roberto Silva - Supervisor',
-              rol: 'supervisor',
-              usuario: 'roberto.silva@empresa.com',
-              codigo: 'SUP002',
-              tipo: 'ejemplo'
-            }
-          ];
-        }
-
         setSupervisores(supervisoresFiltrados);
 
         // Cargar bloques de horarios
@@ -209,54 +186,13 @@ export default function AsignacionIntuitiva() {
 
   const cargarCuadrillaCompleta = async (supervisorId) => {
     try {
-      // Intentar cargar cuadrilla real desde Firestore
       const q = query(collection(db, 'cuadrilla'), where('supervisor_id', '==', supervisorId));
       const snap = await getDocs(q);
-      const cuadrillaReal = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Solo en desarrollo: si no hay datos reales, usar datos de ejemplo.
-      if (cuadrillaReal.length === 0 && import.meta.env.DEV) {
-        return getSupervisorEjemploData(supervisorId);
-      }
-
-      return cuadrillaReal;
+      return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error al cargar cuadrilla:', error);
-      return import.meta.env.DEV ? getSupervisorEjemploData(supervisorId) : [];
+      return [];
     }
-  };
-
-  const getSupervisorEjemploData = (supervisorId) => {
-    // Datos específicos según el supervisor
-    const datosBase = {
-      'supervisor_ejemplo_1': [
-        { nombre: 'Carlos Rodríguez', codigo: 'CR001', area: 'Construcción', maquina: 'Excavadora' },
-        { nombre: 'María González', codigo: 'MG002', area: 'Soldadura', equipo: 'Soldadora MIG' },
-        { nombre: 'Pedro Martínez', codigo: 'PM003', area: 'Construcción', tipo: 'Grúa Torre' },
-        { nombre: 'Ana López', codigo: 'AL004', area: 'Seguridad', maquina: 'Montacargas' }
-      ],
-      'supervisor_ejemplo_2': [
-        { nombre: 'Luis Hernández', codigo: 'LH005', area: 'Mecánica', equipo: 'Torno CNC' },
-        { nombre: 'Carmen Silva', codigo: 'CS006', area: 'Calidad', tipo: 'Inspector' },
-        { nombre: 'Jorge Ramírez', codigo: 'JR007', area: 'Electricidad', maquina: 'Multímetro' },
-        { nombre: 'Rosa Morales', codigo: 'RM008', area: 'Logística', equipo: 'Carretilla' }
-      ]
-    };
-
-    // Si es un supervisor autenticado (con uid de Firebase), usar datos genéricos
-    const personalGenerico = [
-      { nombre: 'Trabajador 1', codigo: 'T001', area: 'Construcción', maquina: 'Herramientas' },
-      { nombre: 'Trabajador 2', codigo: 'T002', area: 'Seguridad', equipo: 'Equipos EPP' },
-      { nombre: 'Trabajador 3', codigo: 'T003', area: 'Mecánica', tipo: 'Mantenimiento' }
-    ];
-
-    const personal = datosBase[supervisorId] || personalGenerico;
-    
-    return personal.map((p, index) => ({
-      id: `ejemplo_${supervisorId}_${index + 1}`,
-      ...p,
-      supervisor_id: supervisorId
-    }));
   };
 
   const cargarCuadrilla = async (supervisorId) => {

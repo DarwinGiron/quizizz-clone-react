@@ -30,10 +30,12 @@ service cloud.firestore {
 
     match /usuarios/{userId} {
       allow read: if isSignedIn();
-      // Autoregistro (Register.jsx): un usuario nuevo crea su propio doc con su uid.
-      allow create: if (isSignedIn() && request.auth.uid == userId && sinCamposDeContrasena())
-        || (isAdmin() && sinCamposDeContrasena());
-      allow update: if isAdmin() && sinCamposDeContrasena();
+      // El acceso es solo por invitación: todas las cuentas (admin,
+      // supervisor) se crean desde el panel de Usuarios por un admin.
+      // No existe autoregistro, así que create/update quedan restringidos
+      // al admin (evita que una cuenta recién creada se autoasigne
+      // rol: "admin" escribiendo su propio documento).
+      allow create, update: if isAdmin() && sinCamposDeContrasena();
       allow delete: if isAdmin();
     }
 

@@ -87,6 +87,43 @@ puede correr en un backend, no en el navegador). El camino oficial:
    crear la cuenta y actualiza el campo `authUid` del doc en Firestore).
 4. Comunícale la contraseña nueva al supervisor.
 
+## 5. Registro: solo por invitación
+
+Ya no existe la ruta pública `/register` ni el autoregistro. Todas las
+cuentas (admin, supervisor) se crean desde el panel de **Usuarios** por
+un administrador. Esto cierra dos cosas a la vez:
+
+- Nadie con la URL puede crear una cuenta y ver los datos internos de la
+  empresa (antes, cualquier visitante podía registrarse y entrar al
+  Dashboard, Capacitaciones, etc. — las rutas no filtran por rol salvo
+  "Mis Asignaciones").
+- Se corrigió una vulnerabilidad real: la regla de Firestore que permitía
+  el autoregistro dejaba que una cuenta recién creada escribiera su
+  propio documento `usuarios/{uid}` **con cualquier `rol`, incluido
+  `"admin"`** — es decir, cualquiera podía autoasignarse admin. Ahora
+  `create`/`update` en `usuarios` son exclusivos del admin.
+
+### Si más adelante quieres que el registro sea público de nuevo
+
+No es solo "restaurar la página". Haría falta, como mínimo:
+
+1. Volver a crear una ruta de registro y decidir con qué rol nace esa
+   cuenta (nunca dejar que el cliente lo elija — la regla de Firestore
+   debe forzar `rol == "usuario"` sin importar lo que mande la app).
+2. Revisar qué debe poder ver un usuario auto-registrado: hoy casi
+   ninguna ruta filtra por rol (`PrivateRoute` solo restringe
+   `/mis-asignaciones`), así que un `rol: "usuario"` público vería el
+   mismo Dashboard/Capacitaciones/Asignaciones que un admin. Para un
+   producto público real, cada ruta debería declarar qué roles pueden
+   entrar.
+3. Firebase permite deshabilitar registro por email/password a nivel de
+   proyecto (Authentication → Sign-in method) — si el registro vuelve a
+   estar cerrado, verifica que ese método siga habilitado (lo necesitas
+   también para crear supervisores desde el admin), pero ninguna
+   configuración de Firebase distingue "solo mi app puede registrar
+   gente" de "cualquiera puede llamar a la API pública" — esa barrera
+   siempre depende de las reglas de Firestore, no de ocultar el botón.
+
 ## Resumen de qué cambió
 
 - Los supervisores ahora tienen cuentas reales de Firebase Auth (email
@@ -98,3 +135,5 @@ puede correr en un backend, no en el navegador). El camino oficial:
 - El rol de administrador se decide por `usuarios/{uid}.rol == "admin"`,
   no por una lista de emails en el código (la lista de emails se conserva
   solo como respaldo temporal en `AuthContext.jsx`).
+- El registro es solo por invitación: no hay ruta pública de registro;
+  toda cuenta se crea desde el panel de Usuarios por un admin.

@@ -22,44 +22,10 @@ const TipoEvaluacionModal = ({ isOpen, onClose, onSelect }) => {
     try {
       setLoading(true);
       const capacitacionesSnapshot = await getDocs(collection(db, 'capacitaciones'));
-      let capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
+      const capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-
-      // Solo en desarrollo: si no hay capacitaciones reales, usar datos de
-      // ejemplo para poder trabajar la UI sin datos reales.
-      if (capacitacionesData.length === 0 && import.meta.env.DEV) {
-        capacitacionesData = [
-          {
-            id: 'ejemplo1',
-            titulo: 'Seguridad Industrial y Prevención de Riesgos',
-            descripcion: 'Capacitación integral sobre normas de seguridad, identificación de riesgos y uso correcto de equipos de protección personal.',
-            categoria: 'Seguridad',
-            fecha_inicio: '2025-08-15',
-            fecha_fin: '2025-08-30',
-            instructor: 'Ing. María García'
-          },
-          {
-            id: 'ejemplo2',
-            titulo: 'Manejo de Equipos y Herramientas',
-            descripcion: 'Capacitación sobre el uso correcto y mantenimiento básico de equipos y herramientas de trabajo.',
-            categoria: 'Técnica',
-            fecha_inicio: '2025-09-01',
-            fecha_fin: '2025-09-15',
-            instructor: 'Ing. Carlos Rodríguez'
-          },
-          {
-            id: 'ejemplo3',
-            titulo: 'Liderazgo y Trabajo en Equipo',
-            descripcion: 'Desarrollo de habilidades de liderazgo y comunicación efectiva en equipos de trabajo.',
-            categoria: 'Liderazgo',
-            fecha_inicio: '2025-09-20',
-            fecha_fin: '2025-10-05',
-            instructor: 'Lic. Ana Martínez'
-          }
-        ];
-      }
 
       // Filtrar capacitaciones que no hayan pasado (solo futuras o en curso)
       const hoy = new Date();

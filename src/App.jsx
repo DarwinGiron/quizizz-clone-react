@@ -18,7 +18,6 @@ import {
 
 // Autenticación
 const Login = lazy(() => import('./modules/auth/pages/Login'));
-const Register = lazy(() => import('./modules/auth/pages/Register'));
 
 // Dashboard
 const Dashboard = lazy(() => import('./modules/dashboard/pages/Dashboard'));
@@ -93,9 +92,10 @@ function App() {
       <Router>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
-          {/* Rutas públicas */}
+          {/* Ruta pública. El registro es solo por invitación: todas las
+              cuentas (admin, supervisor) se crean desde el panel de
+              Usuarios, no hay autoregistro público. */}
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
 
         {/* Rutas protegidas con layout */}
         <Route
